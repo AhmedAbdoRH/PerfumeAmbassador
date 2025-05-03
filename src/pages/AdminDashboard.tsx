@@ -991,7 +991,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       className={`bg-[${lightGold}] text-black px-6 py-2 rounded hover:bg-yellow-500 transition-colors flex items-center gap-2 disabled:opacity-50`}
                     >
                       <Save className="w-5 h-5" />
-                      حفظ الإعدادات
+                      حفظ الاعدادات
                     </button>
                   </div>
                 </form>
