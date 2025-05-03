@@ -1,0 +1,1441 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import type { Category, Service, Banner, StoreSettings } from '../types/database';
+import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, Instagram, Twitter } from 'lucide-react';
+
+const lightGold = '#FFD700';
+const brownDark = '#3d2c1d';
+
+const STORE_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+
+interface AdminDashboardProps {
+  onSettingsUpdate?: () => void;
+}
+
+export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
+  const [editingService, setEditingService] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingBanner, setEditingBanner] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
+  const [openSection, setOpenSection] = useState<'banner' | 'category' | 'service' | 'logo' | 'store' | null>(null);
+
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newService, setNewService] = useState({
+    title: '',
+    description: '',
+    image_url: '',
+    price: '',
+    category_id: ''
+  });
+  const [newBanner, setNewBanner] = useState({
+    type: 'text' as 'text' | 'image',
+    title: '',
+    description: '',
+    image_url: '',
+    is_active: false
+  });
+
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    id: '',
+    store_name: '',
+    store_description: '',
+    logo_url: '',
+    favicon_url: '',
+    og_image_url: '',
+    meta_title: '',
+    meta_description: '',
+    keywords: [],
+    facebook_url: '',
+    instagram_url: '',
+    twitter_url: '',
+    snapchat_url: '',
+    tiktok_url: '',
+    updated_at: ''
+  });
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [uploadingOgImage, setUploadingOgImage] = useState(false);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState('');
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const initialize = async () => {
+      setIsLoading(true);
+      try {
+        await checkAuth();
+        await fetchData();
+        await fetchStoreSettings();
+        await fetchLogoUrl();
+      } catch (err: any) {
+        setError(`خطأ أثناء التهيئة: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initialize();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/admin/login');
+    }
+  };
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
+
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select(`*, category:categories(*)`)
+        .order('created_at', { ascending: false });
+      if (servicesError) throw servicesError;
+      setServices(servicesData || []);
+
+      const { data: bannersData, error: bannersError } = await supabase
+        .from('banners')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (bannersError) throw bannersError;
+      setBanners(bannersData || []);
+    } catch (err: any) {
+      setError(`خطأ في جلب البيانات: ${err.message}`);
+      setCategories([]);
+      setServices([]);
+      setBanners([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchLogoUrl = async () => {
+    const { data } = supabase.storage.from('services').getPublicUrl('logo.png');
+    if (data?.publicUrl) {
+      try {
+        const response = await fetch(data.publicUrl, { method: 'HEAD' });
+        if (response.ok) {
+          setLogoUrl(`${data.publicUrl}?t=${new Date().getTime()}`);
+        } else {
+          setLogoUrl(null);
+        }
+      } catch (fetchError) {
+        console.warn("لم يتم العثور على الشعار الحالي:", fetchError);
+        setLogoUrl(null);
+      }
+    } else {
+      setLogoUrl(null);
+    }
+  };
+
+  const fetchStoreSettings = async () => {
+    try {
+      // Do NOT use .single() or .maybeSingle() to avoid 406 error if multiple rows exist
+      const { data: allRows, error } = await supabase
+        .from('store_settings')
+        .select('*')
+        .eq('id', STORE_SETTINGS_ID);
+
+      if (error) {
+        setError(`خطأ في جلب إعدادات المتجر: ${error.message}`);
+        return;
+      }
+
+      if (allRows && allRows.length > 0) {
+        setStoreSettings(allRows[0]);
+      } else {
+        setStoreSettings({
+          id: STORE_SETTINGS_ID,
+          store_name: '',
+          store_description: '',
+          logo_url: '',
+          favicon_url: '',
+          og_image_url: '',
+          meta_title: '',
+          meta_description: '',
+          keywords: [],
+          facebook_url: '',
+          instagram_url: '',
+          twitter_url: '',
+          snapchat_url: '',
+          tiktok_url: '',
+          updated_at: ''
+        });
+      }
+    } catch (err: any) {
+      setError(`خطأ في جلب إعدادات المتجر: ${err.message}`);
+    }
+  };
+
+  const handleStoreSettingsUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .update({
+          store_name: storeSettings.store_name,
+          store_description: storeSettings.store_description,
+          logo_url: storeSettings.logo_url,
+          favicon_url: storeSettings.favicon_url,
+          og_image_url: storeSettings.og_image_url,
+          meta_title: storeSettings.meta_title,
+          meta_description: storeSettings.meta_description,
+          keywords: storeSettings.keywords,
+          facebook_url: storeSettings.facebook_url,
+          instagram_url: storeSettings.instagram_url,
+          twitter_url: storeSettings.twitter_url,
+          snapchat_url: storeSettings.snapchat_url,
+          tiktok_url: storeSettings.tiktok_url
+        })
+        .eq('id', storeSettings.id);
+
+      if (error) throw error;
+      onSettingsUpdate?.();
+    } catch (err: any) {
+      setError(`خطأ في تحديث إعدادات المتجر: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSettingsImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: 'logo' | 'favicon' | 'og_image'
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setError(null);
+
+    try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('الرجاء اختيار ملف صورة صالح');
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('services')
+        .upload(fileName, file, {
+          cacheControl: '0',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('services')
+        .getPublicUrl(fileName);
+
+      setStoreSettings(prev => ({
+        ...prev,
+        [type === 'logo' ? 'logo_url' : type === 'favicon' ? 'favicon_url' : 'og_image_url']: publicUrl
+      }));
+
+    } catch (err: any) {
+      setError(`خطأ في رفع الصورة: ${err.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: 'logo' | 'favicon' | 'og_image' | 'service' | 'banner'
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const uploadingStateSetters = {
+      logo: setUploadingLogo,
+      favicon: setUploadingFavicon,
+      og_image: setUploadingOgImage,
+      service: setUploadingImage,
+      banner: setUploadingBannerImage
+    };
+
+    const setUploading = uploadingStateSetters[type];
+    setUploading(true);
+    setError(null);
+
+    try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('الرجاء اختيار ملف صورة صالح');
+      }
+      const maxSize = type === 'favicon' ? 0.5 * 1024 * 1024 : 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        throw new Error(`حجم الصورة يجب أن لا يتجاوز ${maxSize / (1024 * 1024)} ميجابايت`);
+      }
+      const fileExt = file.name.split('.').pop();
+      const fileName = type === 'logo' ? 'logo.png' :
+        type === 'favicon' ? 'favicon.png' :
+        type === 'og_image' ? 'og-image.png' :
+        `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('services')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('services')
+        .getPublicUrl(fileName);
+      if (type === 'logo') {
+        setLogoUrl(publicUrl);
+        setStoreSettings(prev => ({ ...prev, logo_url: publicUrl }));
+      } else if (type === 'favicon') {
+        setStoreSettings(prev => ({ ...prev, favicon_url: publicUrl }));
+      } else if (type === 'og_image') {
+        setStoreSettings(prev => ({ ...prev, og_image_url: publicUrl }));
+      } else if (type === 'service') {
+        setNewService(prev => ({ ...prev, image_url: publicUrl }));
+      } else if (type === 'banner') {
+        setNewBanner(prev => ({ ...prev, image_url: publicUrl }));
+      }
+    } catch (err: any) {
+      setError(`خطأ في رفع الصورة: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAddKeyword = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && keywordInput.trim()) {
+      e.preventDefault();
+      setKeywords(prev => [...prev, keywordInput.trim()]);
+      setKeywordInput('');
+    }
+  };
+
+  const handleRemoveKeyword = (indexToRemove: number) => {
+    setKeywords(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const toggleSection = (section: 'banner' | 'category' | 'service' | 'store' | 'logo') => {
+    setOpenSection(openSection === section ? null : section);
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'service' | 'banner' = 'service') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const uploadingState = type === 'service' ? setUploadingImage : setUploadingBannerImage;
+    const setNewState = type === 'service' ? setNewService : setNewBanner;
+
+    uploadingState(true);
+    setError(null);
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
+      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('services')
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
+      setNewState(prev => ({ ...prev, image_url: publicUrl }));
+
+    } catch (err: any) {
+      setError(`خطأ في رفع الصورة: ${err.message}`);
+      setNewState(prev => ({ ...prev, image_url: '' }));
+    } finally {
+      uploadingState(false);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    setError(null);
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
+      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
+
+      const { error: uploadError } = await supabase.storage
+        .from('services')
+        .upload('logo.png', file, {
+          cacheControl: '0',
+          upsert: true
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl('logo.png');
+      setLogoUrl(`${publicUrl}?t=${new Date().getTime()}`);
+
+    } catch (err: any) {
+      setError(`خطأ في رفع الشعار: ${err.message}`);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategory.name.trim()) {
+      setError("اسم القسم مطلوب.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.from('categories').insert([newCategory]);
+      if (error) throw error;
+      setNewCategory({ name: '', description: '' });
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في إضافة القسم: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category.id);
+    setNewCategory({ name: category.name, description: category.description || '' });
+    setOpenSection('category');
+    const formElement = document.getElementById('category-form');
+    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !newCategory.name.trim()) {
+      setError("اسم القسم مطلوب.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: newCategory.name, description: newCategory.description })
+        .eq('id', editingCategory);
+      if (error) throw error;
+
+      setNewCategory({ name: '', description: '' });
+      setEditingCategory(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في تحديث القسم: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategory(null);
+    setNewCategory({ name: '', description: '' });
+    setError(null);
+  };
+
+  const handleDeleteConfirmation = async () => {
+    if (!deleteModal) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (deleteModal.type === 'category') {
+        await supabase.from('services').delete().eq('category_id', deleteModal.id);
+        await supabase.from('categories').delete().eq('id', deleteModal.id);
+      } else if (deleteModal.type === 'service') {
+        await supabase.from('services').delete().eq('id', deleteModal.id);
+      } else if (deleteModal.type === 'banner') {
+        await supabase.from('banners').delete().eq('id', deleteModal.id);
+      }
+
+      setDeleteModal(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ أثناء الحذف: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    setDeleteModal({ id, type: 'category' });
+  };
+
+  const handleDeleteService = (id: string) => {
+    setDeleteModal({ id, type: 'service' });
+  };
+
+  const handleDeleteBanner = (id: string) => {
+    setDeleteModal({ id, type: 'banner' });
+  };
+
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategory || !newService.title.trim()) {
+      setError("يجب اختيار قسم وتحديد عنوان للمنتج.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const serviceToAdd = {
+        ...newService,
+        category_id: selectedCategory
+      };
+      const { error } = await supabase.from('services').insert([serviceToAdd]);
+      if (error) throw error;
+
+      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+      setSelectedCategory('');
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في إضافة المنتج: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditService = (service: Service) => {
+    setEditingService(service.id);
+    setNewService({
+      title: service.title,
+      description: service.description || '',
+      image_url: service.image_url || '',
+      price: service.price || '',
+      category_id: service.category_id || ''
+    });
+    setSelectedCategory(service.category_id || '');
+    setOpenSection('service');
+    const formElement = document.getElementById('service-form');
+    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleUpdateService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService || !selectedCategory || !newService.title.trim()) {
+      setError("يجب اختيار قسم وتحديد عنوان للمنتج.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const serviceToUpdate = {
+        title: newService.title,
+        description: newService.description,
+        image_url: newService.image_url,
+        price: newService.price,
+        category_id: selectedCategory
+      };
+      const { error } = await supabase
+        .from('services')
+        .update(serviceToUpdate)
+        .eq('id', editingService);
+      if (error) throw error;
+
+      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+      setSelectedCategory('');
+      setEditingService(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في تحديث المنتج: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingService(null);
+    setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+    setSelectedCategory('');
+    setError(null);
+  };
+
+  const handleAddBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newBanner.type === 'text' && !newBanner.title.trim()) {
+      setError("عنوان البانر مطلوب للنوع النصي.");
+      return;
+    }
+    if (newBanner.type === 'image' && !newBanner.image_url) {
+      setError("صورة البانر مطلوبة للنوع المصور.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (newBanner.is_active) {
+        await supabase
+          .from('banners')
+          .update({ is_active: false })
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      const { error } = await supabase.from('banners').insert([newBanner]);
+      if (error) throw error;
+
+      setNewBanner({
+        type: 'text',
+        title: '',
+        description: '',
+        image_url: '',
+        is_active: false
+      });
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في إضافة البانر: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditBanner = (banner: Banner) => {
+    setEditingBanner(banner.id);
+    setNewBanner({
+      type: banner.type,
+      title: banner.title || '',
+      description: banner.description || '',
+      image_url: banner.image_url || '',
+      is_active: banner.is_active
+    });
+    setOpenSection('banner');
+    const formElement = document.getElementById('banner-form');
+    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleUpdateBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBanner) return;
+    
+    if (newBanner.type === 'text' && !newBanner.title.trim()) {
+      setError("عنوان البانر مطلوب للنوع النصي.");
+      return;
+    }
+    if (newBanner.type === 'image' && !newBanner.image_url) {
+      setError("صورة البانر مطلوبة للنوع المصور.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (newBanner.is_active) {
+        await supabase
+          .from('banners')
+          .update({ is_active: false })
+          .neq('id', editingBanner);
+      }
+
+      const { error } = await supabase
+        .from('banners')
+        .update(newBanner)
+        .eq('id', editingBanner);
+      if (error) throw error;
+
+      setNewBanner({
+        type: 'text',
+        title: '',
+        description: '',
+        image_url: '',
+        is_active: false
+      });
+      setEditingBanner(null);
+      await fetchData();
+    } catch (err: any) {
+      setError(`خطأ في تحديث البانر: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEditBanner = () => {
+    setEditingBanner(null);
+    setNewBanner({
+      type: 'text',
+      title: '',
+      description: '',
+      image_url: '',
+      is_active: false
+    });
+    setError(null);
+  };
+
+  const handleLogout = async () => {
+    setIsLoading(true);
+    setError(null);
+    await supabase.auth.signOut();
+    setIsLoading(false);
+    navigate('/admin/login');
+  };
+
+  if (isLoading && categories.length === 0 && services.length === 0) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-[${brownDark}] to-black text-white font-[Cairo]`} dir="rtl">
+        <div className="text-xl animate-pulse">جاري التحميل...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`min-h-screen bg-gradient-to-br from-[${brownDark}] to-black text-gray-200 font-[Cairo]`} dir="rtl">
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">تأكيد الحذف</h2>
+            <p className="text-gray-600 mb-6">
+              {deleteModal.type === 'category'
+                ? 'هل أنت متأكد من حذف هذا القسم؟ سيتم حذف جميع المنتجات المرتبطة به.'
+                : deleteModal.type === 'banner'
+                ? 'هل أنت متأكد من حذف هذا البانر؟'
+                : 'هل أنت متأكد من حذف هذا المنتج؟'}
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleDeleteConfirmation}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                disabled={isLoading}
+              >
+                تأكيد الحذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-black/60 backdrop-blur-sm shadow-lg sticky top-0 z-50 border-b border-white/10">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className={`text-2xl font-bold text-[${lightGold}]`}>لوحة التحكم</h1>
+          {isLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[${lightGold}]"></div>}
+          <button
+            onClick={handleLogout}
+            className="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 transition-colors font-semibold disabled:opacity-50"
+            disabled={isLoading}
+          >
+            تسجيل خروج
+          </button>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        {error && (
+          <div className="bg-red-800/60 border border-red-600 text-red-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
+            <strong className="font-bold block">خطأ!</strong>
+            <span className="block sm:inline mt-1">{error}</span>
+            <button onClick={() => setError(null)} className="absolute top-2 bottom-2 left-3 px-3 text-red-100 hover:text-white focus:outline-none" title="إغلاق الرسالة">
+              <X size={20}/>
+            </button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="bg-green-800/60 border border-green-600 text-green-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
+            <span className="block sm:inline">{successMsg}</span>
+            <button 
+              onClick={() => setSuccessMsg(null)} 
+              className="absolute top-2 bottom-2 left-3 px-3 text-green-100 hover:text-white focus:outline-none"
+              title="إغلاق الرسالة"
+            >
+              <X size={20}/>
+            </button>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Store Settings Section */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => setOpenSection(openSection === 'settings' ? null : 'settings')}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+            >
+              <h2 className={`text-xl font-bold text-[${lightGold}]`}>
+                معلومات المتجر
+              
+              </h2>
+              {openSection === 'settings' ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+            </button>
+            
+            <div className={`transition-all duration-300 ease-in-out ${openSection === 'settings' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="p-6 border-t border-white/10">
+                <form onSubmit={handleStoreSettingsUpdate} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">اسم المتجر</label>
+                      <input
+                        type="text"
+                        value={storeSettings.store_name || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, store_name: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="اسم المتجر"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">وصف المتجر</label>
+                      <input
+                        type="text"
+                        value={storeSettings.store_description || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, store_description: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="وصف المتجر"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Logo Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">شعار المتجر</label>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSettingsImageUpload(e, 'logo')}
+                          className="hidden"
+                          id="logo-upload"
+                        />
+                        <label
+                          htmlFor="logo-upload"
+                          className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                        >
+                          <Upload className="w-5 h-5 ml-2" />
+                          {storeSettings.logo_url ? 'تغيير الشعار' : 'رفع الشعار'}
+                        </label>
+                        {storeSettings.logo_url && (
+                          <img
+                            src={storeSettings.logo_url}
+                            alt="الشعار"
+                            className="mt-2 h-16 w-auto object-contain"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Favicon Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">أيقونة المتصفح</label>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSettingsImageUpload(e, 'favicon')}
+                          className="hidden"
+                          id="favicon-upload"
+                        />
+                        <label
+                          htmlFor="favicon-upload"
+                          className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                        >
+                          <Upload className="w-5 h-5 ml-2" />
+                          {storeSettings.favicon_url ? 'تغيير الأيقونة' : 'رفع الأيقونة'}
+                        </label>
+                        {storeSettings.favicon_url && (
+                          <img
+                            src={storeSettings.favicon_url}
+                            alt="أيقونة المتصفح"
+                            className="mt-2 h-8 w-8 object-contain"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* OG Image Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">صورة المشاركة</label>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSettingsImageUpload(e, 'og_image')}
+                          className="hidden"
+                          id="og-image-upload"
+                        />
+                        <label
+                          htmlFor="og-image-upload"
+                          className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                        >
+                          <Upload className="w-5 h-5 ml-2" />
+                          {storeSettings.og_image_url ? 'تغيير الصورة' : 'رفع الصورة'}
+                        </label>
+                        {storeSettings.og_image_url && (
+                          <img
+                            src={storeSettings.og_image_url}
+                            alt="صورة المشاركة"
+                            className="mt-2 h-16 w-auto object-contain"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">عنوان الصفحة</label>
+                      <input
+                        type="text"
+                        value={storeSettings.meta_title || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, meta_title: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="عنوان الصفحة"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">وصف الصفحة</label>
+                      <input
+                        type="text"
+                        value={storeSettings.meta_description || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, meta_description: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="وصف الصفحة"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">الكلمات المفتاحية (مفصولة بفواصل)</label>
+                    <input
+                      type="text"
+                      value={storeSettings.keywords?.join(', ') || ''}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, keywords: e.target.value.split(',').map(k => k.trim()) })}
+                      className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                      placeholder="كلمة1, كلمة2, كلمة3"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">رابط فيسبوك</label>
+                      <input
+                        type="url"
+                        value={storeSettings.facebook_url || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, facebook_url: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="https://facebook.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">رابط انستغرام</label>
+                      <input
+                        type="url"
+                        value={storeSettings.instagram_url || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, instagram_url: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="https://instagram.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">رابط تويتر</label>
+                      <input
+                        type="url"
+                        value={storeSettings.twitter_url || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, twitter_url: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="https://twitter.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">رابط سناب شات</label>
+                      <input
+                        type="url"
+                        value={storeSettings.snapchat_url || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, snapchat_url: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="https://snapchat.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">رابط تيك توك</label>
+                      <input
+                        type="url"
+                        value={storeSettings.tiktok_url || ''}
+                        onChange={(e) => setStoreSettings({ ...storeSettings, tiktok_url: e.target.value })}
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        placeholder="https://tiktok.com/..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className={`bg-[${lightGold}] text-black px-6 py-2 rounded hover:bg-yellow-500 transition-colors flex items-center gap-2 disabled:opacity-50`}
+                    >
+                      <Save className="w-5 h-5" />
+                      حفظ الإعدادات
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* باقي الأقسام: البانرات، الأقسام، المنتجات ... */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => setOpenSection(openSection === 'banner' ? null : 'banner')}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+            >
+              <h2 className={`text-xl font-bold text-[${lightGold}]`}>
+                {editingBanner ? 'تعديل البانر' : 'إدارة البانر الرئيسي'}
+              </h2>
+              {openSection === 'banner' ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+            </button>
+            
+            <div className={`transition-all duration-300 ease-in-out ${openSection === 'banner' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="p-6 border-t border-white/10">
+                <form onSubmit={editingBanner ? handleUpdateBanner : handleAddBanner} className="mb-8 space-y-4">
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="text"
+                        checked={newBanner.type === 'text'}
+                        onChange={(e) => setNewBanner({ ...newBanner, type: e.target.value as 'text' | 'image' })}
+                        className="ml-2"
+                      />
+                      نص
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="image"
+                        checked={newBanner.type === 'image'}
+                        onChange={(e) => setNewBanner({ ...newBanner, type: e.target.value as 'text' | 'image' })}
+                        className="ml-2"
+                      />
+                      صورة
+                    </label>
+                  </div>
+
+                  {newBanner.type === 'text' && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="عنوان البانر"
+                        value={newBanner.title}
+                        onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
+                        className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                        required
+                        disabled={isLoading}
+                      />
+                      <textarea
+                        placeholder="وصف البانر"
+                        value={newBanner.description}
+                        onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })}
+                        rows={3}
+                        className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                        disabled={isLoading}
+                      />
+                    </>
+                  )}
+
+                  {newBanner.type === 'image' && (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'banner')}
+                        className="hidden"
+                        id="banner-image-upload"
+                        disabled={uploadingBannerImage || isLoading}
+                      />
+                      <label
+                        htmlFor="banner-image-upload"
+                        className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingBannerImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingBannerImage ? 'animate-pulse' : ''}`} />
+                        {uploadingBannerImage ? 'جاري رفع الصورة...' : (newBanner.image_url ? 'تغيير الصورة' : 'اختر صورة للبانر')}
+                      </label>
+                      {newBanner.image_url && !uploadingBannerImage && (
+                        <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
+                          <img
+                            src={newBanner.image_url}
+                            alt="معاينة"
+                            className="w-16 h-16 object-cover rounded border border-gray-700"
+                          />
+                          <span className="text-gray-400 text-xs">صورة البانر الحالية/الجديدة</span>
+                          <button type="button" onClick={() => setNewBanner({...newBanner, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
+                            <X size={16}/>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newBanner.is_active}
+                      onChange={(e) => setNewBanner({ ...newBanner, is_active: e.target.checked })}
+                      className="rounded"
+                    />
+                    تفعيل هذا البانر
+                  </label>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled={isLoading}
+                    >
+                      {editingBanner ? (
+                        <> <Save size={20} /> حفظ التعديلات </>
+                      ) : (
+                        <> <Plus size={20} /> إضافة بانر </>
+                      )}
+                    </button>
+                    {editingBanner && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditBanner}
+                        className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <X size={20} /> إلغاء
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">البانرات الحالية</h3>
+                <div className="space-y-3">
+                  {!isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد بانرات لعرضها.</p>}
+                  {isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل البانرات...</p>}
+                  {banners.map((banner) => (
+                    <div key={banner.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingBanner === banner.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 overflow-hidden">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 rounded text-xs ${banner.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>
+                              {banner.is_active ? 'مفعل' : 'غير مفعل'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-300`}>
+                              {banner.type === 'text' ? 'نصي' : 'صورة'}
+                            </span>
+                          </div>
+                          {banner.type === 'image' && banner.image_url && (
+                            <img
+                              src={banner.image_url}
+                              alt={banner.title || 'صورة البانر'}
+                              className="w-full h-32 object-cover rounded mb-2"
+                            />
+                          )}
+                          <h4 className="font-bold text-white text-lg truncate" title={banner.title || ''}>
+                            {banner.title || 'بدون عنوان'}
+                          </h4>
+                          {banner.description && (
+                            <p className="text-gray-400 text-sm mt-1 line-clamp-2">{banner.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-3 flex-shrink-0">
+                          <button
+                            onClick={() => !isLoading && handleEditBanner(banner)}
+                            title="تعديل البانر"
+                            className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+                            disabled={editingBanner === banner.id || isLoading}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => !isLoading && handleDeleteBanner(banner.id)}
+                            title="حذف البانر"
+                            className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLoading}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => setOpenSection(openSection === 'category' ? null : 'category')}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+            >
+              <h2 className={`text-xl font-bold text-[${lightGold}]`}>
+                {editingCategory ? 'تعديل القسم' : 'إدارة الأقسام'}
+              </h2>
+              {openSection === 'category' ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+            </button>
+            
+            <div className={`transition-all duration-300 ease-in-out ${openSection === 'category' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="p-6 border-t border-white/10">
+                <form onSubmit={editingCategory ? handleUpdateCategory : handleAddCategory} className="mb-8 space-y-4">
+                  <input
+                    type="text"
+                    placeholder="اسم القسم"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                    className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                    required
+                    disabled={isLoading}
+                  />
+                  <textarea
+                    placeholder="وصف القسم (اختياري)"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                    rows={3}
+                    className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                    disabled={isLoading}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled={isLoading}
+                    >
+                      {editingCategory ? (
+                        <> <Save size={20} /> حفظ التعديلات </>
+                      ) : (
+                        <> <Plus size={20} /> إضافة قسم </>
+                      )}
+                    </button>
+                    {editingCategory && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditCategory}
+                        className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <X size={20} /> إلغاء
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">الأقسام الحالية</h3>
+                <div className="space-y-3">
+                  {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
+                  {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
+                  {categories.map((category) => (
+                    <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 overflow-hidden">
+                          <h4 className="font-bold text-white text-lg truncate" title={category.name}>{category.name}</h4>
+                          {category.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>}
+                        </div>
+                        <div className="flex gap-3 flex-shrink-0">
+                          <button
+                            onClick={() => !isLoading && handleEditCategory(category)}
+                            title="تعديل القسم"
+                            className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+                            disabled={editingCategory === category.id || isLoading}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => !isLoading && handleDeleteCategory(category.id)}
+                            title="حذف القسم"
+                            className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLoading}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => setOpenSection(openSection === 'service' ? null : 'service')}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+            >
+              <h2 className={`text-xl font-bold text-[${lightGold}]`}>
+                {editingService ? 'تعديل المنتج' : 'إدارة المنتجات'}
+              </h2>
+              {openSection === 'service' ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+            </button>
+            
+            <div className={`transition-all duration-300 ease-in-out ${openSection === 'service' ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+              <div className="p-6 border-t border-white/10">
+                <form onSubmit={editingService ? handleUpdateService : handleAddService} className="mb-8 space-y-4">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-50`}
+                    required
+                    disabled={isLoading || categories.length === 0}
+                  >
+                    <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id} className="bg-gray-800 text-white">
+                        {category.name}
+                      </option>
+                    ))}
+                    {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="عنوان المنتج"
+                    value={newService.title}
+                    onChange={(e) => setNewService({ ...newService, title: e.target.value })}
+                    className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                    required
+                    disabled={isLoading}
+                  />
+                  <textarea
+                    placeholder="وصف المنتج (اختياري)"
+                    value={newService.description}
+                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                    rows={3}
+                    className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                    disabled={isLoading}
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                      disabled={uploadingImage || isLoading}
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
+                      {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
+                    </label>
+                    {newService.image_url && !uploadingImage && (
+                      <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
+                        <img
+                          src={newService.image_url}
+                          alt="معاينة"
+                          className="w-16 h-16 object-cover rounded border border-gray-700"
+                        />
+                        <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
+                        <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
+                          <X size={16}/>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="السعر (مثال: 150 ريال أو مجاني)"
+                    value={newService.price}
+                    onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                    className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                    disabled={isLoading}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled={isLoading || (editingService ? false : !selectedCategory)}
+                    >
+                      {editingService ? (
+                        <> <Save size={20} /> حفظ التعديلات </>
+                      ) : (
+                        <> <Plus size={20} /> إضافة منتج </>
+                      )}
+                    </button>
+                    {editingService && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <X size={20} /> إلغاء
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">المنتجات الحالية</h3>
+                <div className="space-y-3">
+                  {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
+                  {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
+                  {services.map((service) => (
+                    <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 flex items-start gap-4 overflow-hidden">
+                          {service.image_url && (
+                            <img
+                              src={service.image_url}
+                              alt={service.title}
+                              className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 overflow-hidden">
+                            <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
+                              {service.category?.name || 'قسم غير محدد'}
+                            </div>
+                            <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
+                            {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
+                            {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
+                          </div>
+                        </div>
+                        <div className="flex gap-3 flex-shrink-0">
+                          <button
+                            onClick={() => !isLoading && handleEditService(service)}
+                            title="تعديل المنتج"
+                            className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+                            disabled={editingService === service.id || isLoading}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => !isLoading && handleDeleteService(service.id)}
+                            title="حذف المنتج"
+                            className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLoading}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
