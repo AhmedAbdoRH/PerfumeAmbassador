@@ -28,7 +28,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingBanner, setEditingBanner] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('store');
+  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('products');
   const [productsSubTab, setProductsSubTab] = useState<'services' | 'categories'>('services');
 
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
@@ -73,7 +73,12 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [themeSettings, setThemeSettings] = useState({
     primaryColor: '#FFD700',
     secondaryColor: '#3d2c1d',
+    backgroundType: 'solid', // 'solid' or 'gradient'
     backgroundColor: '#1a1a1a',
+    gradientStartColor: '#FFD700',
+    gradientEndColor: '#3d2c1d',
+    gradientAngle: 135,
+    backgroundGradient: '',
     fontFamily: 'Cairo',
   });
   const [savingTheme, setSavingTheme] = useState(false);
@@ -206,7 +211,19 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         .eq('id', STORE_SETTINGS_ID)
         .single();
       if (error) return;
-      if (data?.theme_settings) setThemeSettings(data.theme_settings);
+      if (data?.theme_settings) {
+        const t = data.theme_settings;
+        // استنتاج نوع الخلفية من القيم المخزنة
+        let backgroundType = 'solid';
+        if (t.backgroundGradient && t.backgroundGradient !== '') backgroundType = 'gradient';
+        setThemeSettings({
+          ...t,
+          backgroundType,
+          gradientStartColor: t.gradientStartColor || '#FFD700',
+          gradientEndColor: t.gradientEndColor || '#3d2c1d',
+          gradientAngle: t.gradientAngle || 135,
+        });
+      }
     } catch {}
   };
 
@@ -214,13 +231,24 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     e.preventDefault();
     setSavingTheme(true);
     try {
+      // خزّن فقط الخاصية المناسبة حسب نوع الخلفية
+      let toSave = { ...themeSettings };
+      if (themeSettings.backgroundType === 'solid') {
+        toSave.backgroundGradient = '';
+      } else if (themeSettings.backgroundType === 'gradient') {
+        toSave.backgroundGradient = `linear-gradient(${themeSettings.gradientAngle}deg, ${themeSettings.gradientStartColor}, ${themeSettings.gradientEndColor})`;
+        toSave.backgroundColor = '';
+      }
+      // لا تخزن backgroundType في القاعدة
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { backgroundType, ...dbTheme } = toSave;
       const { error } = await supabase
         .from('store_settings')
-        .update({ theme_settings: themeSettings })
+        .update({ theme_settings: dbTheme })
         .eq('id', STORE_SETTINGS_ID);
       if (error) throw error;
       setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
-      applyThemeSettings(themeSettings);
+      applyThemeSettings(dbTheme);
     } catch (err: any) {
       setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
     } finally {
@@ -232,8 +260,14 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     const root = document.documentElement;
     root.style.setProperty('--primary-color', settings.primaryColor);
     root.style.setProperty('--secondary-color', settings.secondaryColor);
-    root.style.setProperty('--background-color', settings.backgroundColor);
     root.style.setProperty('--font-family', settings.fontFamily);
+    if (settings.backgroundType === 'gradient' && settings.backgroundGradient) {
+      root.style.setProperty('--background-gradient', settings.backgroundGradient);
+      root.style.setProperty('--background-color', '');
+    } else {
+      root.style.setProperty('--background-gradient', '');
+      root.style.setProperty('--background-color', settings.backgroundColor);
+    }
   };
 
   const handleStoreSettingsUpdate = async (e: React.FormEvent) => {
@@ -886,13 +920,106 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-gray-300 font-medium">لون الخلفية</label>
-                    <input
-                      type="color"
-                      value={themeSettings.backgroundColor}
-                      onChange={e => setThemeSettings(s => ({ ...s, backgroundColor: e.target.value }))}
-                      className="w-16 h-10 border-none rounded"
-                    />
+                    <label className="block mb-1 text-gray-300 font-medium">خلفية الموقع</label>
+                    <div className="flex gap-4 mb-2">
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="backgroundType"
+                          value="solid"
+                          checked={themeSettings.backgroundType === 'solid'}
+                          onChange={() => setThemeSettings(s => ({
+                            ...s,
+                            backgroundType: 'solid',
+                            backgroundGradient: '',
+                          }))}
+                        />
+                        لون ثابت
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="backgroundType"
+                          value="gradient"
+                          checked={themeSettings.backgroundType === 'gradient'}
+                          onChange={() => setThemeSettings(s => ({
+                            ...s,
+                            backgroundType: 'gradient',
+                            backgroundGradient: `linear-gradient(${s.gradientAngle}deg, ${s.gradientStartColor}, ${s.gradientEndColor})`,
+                          }))}
+                        />
+                        تدرج لوني
+                      </label>
+                    </div>
+                    {themeSettings.backgroundType === 'solid' && (
+                      <div>
+                        <input
+                          type="color"
+                          value={themeSettings.backgroundColor}
+                          onChange={e => setThemeSettings(s => ({
+                            ...s,
+                            backgroundColor: e.target.value,
+                            backgroundGradient: '',
+                          }))}
+                          className="w-16 h-10 border-none rounded"
+                        />
+                        <span className="ml-2 text-xs text-gray-400">اختر لون الخلفية الثابت</span>
+                      </div>
+                    )}
+                    {themeSettings.backgroundType === 'gradient' && (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-gray-400">البداية</label>
+                          <input
+                            type="color"
+                            value={themeSettings.gradientStartColor}
+                            onChange={e => setThemeSettings(s => {
+                              const gradient = `linear-gradient(${s.gradientAngle}deg, ${e.target.value}, ${s.gradientEndColor})`;
+                              return {
+                                ...s,
+                                gradientStartColor: e.target.value,
+                                backgroundGradient: gradient,
+                              };
+                            })}
+                            className="w-10 h-8 border-none rounded"
+                          />
+                          <label className="text-xs text-gray-400">النهاية</label>
+                          <input
+                            type="color"
+                            value={themeSettings.gradientEndColor}
+                            onChange={e => setThemeSettings(s => {
+                              const gradient = `linear-gradient(${s.gradientAngle}deg, ${s.gradientStartColor}, ${e.target.value})`;
+                              return {
+                                ...s,
+                                gradientEndColor: e.target.value,
+                                backgroundGradient: gradient,
+                              };
+                            })}
+                            className="w-10 h-8 border-none rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 mr-2">زاوية التدرج</label>
+                          <input
+                            type="number"
+                            value={themeSettings.gradientAngle}
+                            onChange={e => setThemeSettings(s => {
+                              const angle = parseInt(e.target.value, 10) || 0;
+                              const gradient = `linear-gradient(${angle}deg, ${s.gradientStartColor}, ${s.gradientEndColor})`;
+                              return {
+                                ...s,
+                                gradientAngle: angle,
+                                backgroundGradient: gradient,
+                              };
+                            })}
+                            className="w-20 p-1 rounded bg-black/30 text-white border border-white/10"
+                            min="0"
+                            max="360"
+                          />
+                        </div>
+                        <span className="text-xs text-gray-400">اختر ألوان وزاوية التدرج</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block mb-1 text-gray-300 font-medium">الخط الرئيسي</label>
@@ -923,7 +1050,10 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                   <div
                     className="rounded-lg p-6"
                     style={{
-                      background: themeSettings.backgroundColor,
+                      background:
+                        themeSettings.backgroundType === 'gradient'
+                          ? themeSettings.backgroundGradient
+                          : themeSettings.backgroundColor,
                       color: themeSettings.primaryColor,
                       fontFamily: themeSettings.fontFamily,
                       border: `2px solid ${themeSettings.secondaryColor}`

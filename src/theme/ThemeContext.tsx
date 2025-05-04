@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 type ThemeContextType = {
   primaryColor: string;
@@ -10,7 +10,20 @@ const ThemeContext = createContext<ThemeContextType>({
   setPrimaryColor: () => {},
 });
 
-export const ThemeProvider = ThemeContext.Provider;
+export const ThemeProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
+  // إدارة الحالة داخليًا
+  const [primaryColor, setPrimaryColor] = useState('#c7a17a');
+
+  return (
+    <ThemeContext.Provider value={{ primaryColor, setPrimaryColor }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
 
 export function useTheme() {
   return useContext(ThemeContext);

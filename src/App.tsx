@@ -44,11 +44,38 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
-  const [primaryColor, setPrimaryColor] = useState<string>('#c7a17a');
 
   useEffect(() => {
     fetchStoreSettings();
   }, []);
+
+  useEffect(() => {
+    // تطبيق ألوان المظهر من إعدادات المتجر (theme_settings أو fallback)
+    if (storeSettings) {
+      const theme = (storeSettings as any).theme_settings || {};
+      const primary = theme.primaryColor || '#c7a17a';
+      const secondary = theme.secondaryColor || '#fff';
+      const fontFamily = theme.fontFamily || 'Cairo, sans-serif';
+      const backgroundGradient = theme.backgroundGradient || '';
+      const backgroundColor = theme.backgroundColor || '#000';
+
+      const root = document.documentElement;
+      root.style.setProperty('--color-primary', primary);
+      root.style.setProperty('--color-secondary', secondary);
+      root.style.setProperty('--color-accent', '#d99323');
+      root.style.setProperty('--color-accent-light', '#e0a745');
+      root.style.setProperty('--font-family', fontFamily);
+
+      // دعم التدرج اللوني للخلفية أو اللون الثابت
+      if (backgroundGradient && backgroundGradient.trim() !== '') {
+        root.style.setProperty('--background-gradient', backgroundGradient);
+        root.style.setProperty('--background-color', '');
+      } else {
+        root.style.setProperty('--background-gradient', '');
+        root.style.setProperty('--background-color', backgroundColor);
+      }
+    }
+  }, [storeSettings]);
 
   const fetchStoreSettings = async () => {
     const { data } = await supabase
@@ -58,12 +85,11 @@ function App() {
     
     if (data) {
       setStoreSettings(data);
-      if (data.primary_color) setPrimaryColor(data.primary_color);
     }
   };
 
   return (
-    <ThemeProvider value={{ primaryColor, setPrimaryColor }}>
+    <ThemeProvider>
       <Helmet>
         <title>{storeSettings?.meta_title || storeSettings?.store_name || 'سفير العطور'}</title>
         <meta name="description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
@@ -85,7 +111,7 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={
             <PrivateRoute>
-              <AdminDashboard onSettingsUpdate={fetchStoreSettings} setPrimaryColor={setPrimaryColor} />
+              <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
             </PrivateRoute>
           } />
           <Route path="/service/:id" element={
@@ -97,7 +123,16 @@ function App() {
             </>
           } />
           <Route path="/" element={
-            <div className="min-h-screen bg-beige font-cairo">
+            <div
+              className="min-h-screen font-cairo"
+              style={{
+                background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
+                  ? (storeSettings as any).theme_settings.backgroundGradient
+                  : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
+                    ? (storeSettings as any).theme_settings.backgroundColor
+                    : undefined,
+              }}
+            >
               <Header storeSettings={storeSettings} />
               <Hero storeSettings={storeSettings} />
               <Services />
