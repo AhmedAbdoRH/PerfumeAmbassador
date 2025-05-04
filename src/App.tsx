@@ -11,6 +11,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceDetails from './pages/ServiceDetails';
 import type { StoreSettings } from './types/database';
+import { ThemeProvider } from './theme/ThemeContext';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -43,6 +44,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [primaryColor, setPrimaryColor] = useState<string>('#c7a17a');
 
   useEffect(() => {
     fetchStoreSettings();
@@ -56,11 +58,12 @@ function App() {
     
     if (data) {
       setStoreSettings(data);
+      if (data.primary_color) setPrimaryColor(data.primary_color);
     }
   };
 
   return (
-    <>
+    <ThemeProvider value={{ primaryColor, setPrimaryColor }}>
       <Helmet>
         <title>{storeSettings?.meta_title || storeSettings?.store_name || 'سفير العطور'}</title>
         <meta name="description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
@@ -82,7 +85,7 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={
             <PrivateRoute>
-              <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
+              <AdminDashboard onSettingsUpdate={fetchStoreSettings} setPrimaryColor={setPrimaryColor} />
             </PrivateRoute>
           } />
           <Route path="/service/:id" element={
@@ -104,7 +107,7 @@ function App() {
           } />
         </Routes>
       </Router>
-    </>
+    </ThemeProvider>
   );
 }
 

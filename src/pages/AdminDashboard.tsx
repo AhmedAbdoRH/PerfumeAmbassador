@@ -28,7 +28,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingBanner, setEditingBanner] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'theme' | 'store' | 'banners' | 'category' | 'service'>('store');
+  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('store');
+  const [productsSubTab, setProductsSubTab] = useState<'services' | 'categories'>('services');
 
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [newService, setNewService] = useState({
@@ -815,17 +816,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           {/* Side Tabs */}
           <div className="space-y-2">
             <button
-              onClick={() => setActiveTab('theme')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'theme'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
-              }`}
-            >
-              <Palette className="h-5 w-5" />
-              تخصيص المظهر
-            </button>
-            <button
               onClick={() => setActiveTab('store')}
               className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                 activeTab === 'store'
@@ -848,26 +838,26 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
               البانرات
             </button>
             <button
-              onClick={() => setActiveTab('category')}
+              onClick={() => setActiveTab('products')}
               className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'category'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
-              }`}
-            >
-              <List className="h-5 w-5" />
-              الأقسام
-            </button>
-            <button
-              onClick={() => setActiveTab('service')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'service'
+                activeTab === 'products'
                   ? 'bg-accent text-primary'
                   : 'bg-white/5 text-secondary hover:bg-white/10'
               }`}
             >
               <Package className="h-5 w-5" />
-              المنتجات
+              إدارة المنتجات
+            </button>
+            <button
+              onClick={() => setActiveTab('theme')}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'theme'
+                  ? 'bg-accent text-primary'
+                  : 'bg-white/5 text-secondary hover:bg-white/10'
+              }`}
+            >
+              <Palette className="h-5 w-5" />
+              تخصيص المظهر
             </button>
           </div>
 
@@ -1334,234 +1324,262 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
               </div>
             )}
 
-            {activeTab === 'category' && (
+            {activeTab === 'products' && (
               <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
                 <div className="p-6 border-t border-white/10">
-                  <form onSubmit={editingCategory ? handleUpdateCategory : handleAddCategory} className="mb-8 space-y-4">
-                    <input
-                      type="text"
-                      placeholder="اسم القسم"
-                      value={newCategory.name}
-                      onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                      className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                      required
-                      disabled={isLoading}
-                    />
-                    <textarea
-                      placeholder="وصف القسم (اختياري)"
-                      value={newCategory.description}
-                      onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                      rows={3}
-                      className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                      disabled={isLoading}
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        type="submit"
-                        className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
-                        disabled={isLoading}
-                      >
-                        {editingCategory ? (
-                          <> <Save size={20} /> حفظ التعديلات </>
-                        ) : (
-                          <> <Plus size={20} /> إضافة قسم </>
-                        )}
-                      </button>
-                      {editingCategory && (
-                        <button
-                          type="button"
-                          onClick={handleCancelEditCategory}
-                          className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
-                          disabled={isLoading}
-                        >
-                          <X size={20} /> إلغاء
-                        </button>
-                      )}
-                    </div>
-                  </form>
+                  {/* تبويبات فرعية */}
+                  <div className="flex mb-6 gap-2">
+                    <button
+                      onClick={() => setProductsSubTab('services')}
+                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
+                        productsSubTab === 'services'
+                          ? `bg-[${lightGold}] text-black shadow`
+                          : 'bg-black/20 text-gray-300 hover:bg-black/30'
+                      }`}
+                    >
+                      المنتجات
+                    </button>
+                    <button
+                      onClick={() => setProductsSubTab('categories')}
+                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
+                        productsSubTab === 'categories'
+                          ? `bg-[${lightGold}] text-black shadow`
+                          : 'bg-black/20 text-gray-300 hover:bg-black/30'
+                      }`}
+                    >
+                      الأقسام
+                    </button>
+                  </div>
 
-                  <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">الأقسام الحالية</h3>
-                  <div className="space-y-3">
-                    {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
-                    {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
-                    {categories.map((category) => (
-                      <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 overflow-hidden">
-                            <h4 className="font-bold text-white text-lg truncate" title={category.name}>{category.name}</h4>
-                            {category.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>}
-                          </div>
-                          <div className="flex gap-3 flex-shrink-0">
+                  {/* المنتجات */}
+                  {productsSubTab === 'services' && (
+                    <>
+                      <form onSubmit={editingService ? handleUpdateService : handleAddService} className="mb-8 space-y-4" id="service-form">
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-50`}
+                          required
+                          disabled={isLoading || categories.length === 0}
+                        >
+                          <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id} className="bg-gray-800 text-white">
+                              {category.name}
+                            </option>
+                          ))}
+                          {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="عنوان المنتج"
+                          value={newService.title}
+                          onChange={(e) => setNewService({ ...newService, title: e.target.value })}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          required
+                          disabled={isLoading}
+                        />
+                        <textarea
+                          placeholder="وصف المنتج (اختياري)"
+                          value={newService.description}
+                          onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                          rows={3}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          disabled={isLoading}
+                        />
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            id="image-upload"
+                            disabled={uploadingImage || isLoading}
+                          />
+                          <label
+                            htmlFor="image-upload"
+                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
+                            {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
+                          </label>
+                          {newService.image_url && !uploadingImage && (
+                            <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
+                              <img
+                                src={newService.image_url}
+                                alt="معاينة"
+                                className="w-16 h-16 object-cover rounded border border-gray-700"
+                              />
+                              <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
+                              <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
+                                <X size={16}/>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="السعر (مثال: 150 ريال أو مجاني)"
+                          value={newService.price}
+                          onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          disabled={isLoading}
+                        />
+                        <div className="flex gap-3">
+                          <button
+                            type="submit"
+                            className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                            disabled={isLoading || (editingService ? false : !selectedCategory)}
+                          >
+                            {editingService ? (
+                              <> <Save size={20} /> حفظ التعديلات </>
+                            ) : (
+                              <> <Plus size={20} /> إضافة منتج </>
+                            )}
+                          </button>
+                          {editingService && (
                             <button
-                              onClick={() => !isLoading && handleEditCategory(category)}
-                              title="تعديل القسم"
-                              className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-                              disabled={editingCategory === category.id || isLoading}
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => !isLoading && handleDeleteCategory(category.id)}
-                              title="حذف القسم"
-                              className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
                               disabled={isLoading}
                             >
-                              <Trash2 size={18} />
+                              <X size={20} /> إلغاء
                             </button>
-                          </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+                      </form>
 
-            {activeTab === 'service' && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
-                <div className="p-6 border-t border-white/10">
-                  <form onSubmit={editingService ? handleUpdateService : handleAddService} className="mb-8 space-y-4">
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-50`}
-                      required
-                      disabled={isLoading || categories.length === 0}
-                    >
-                      <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id} className="bg-gray-800 text-white">
-                          {category.name}
-                        </option>
-                      ))}
-                      {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="عنوان المنتج"
-                      value={newService.title}
-                      onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                      className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                      required
-                      disabled={isLoading}
-                    />
-                    <textarea
-                      placeholder="وصف المنتج (اختياري)"
-                      value={newService.description}
-                      onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                      rows={3}
-                      className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                      disabled={isLoading}
-                    />
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                        disabled={uploadingImage || isLoading}
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
-                        {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
-                      </label>
-                      {newService.image_url && !uploadingImage && (
-                        <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
-                          <img
-                            src={newService.image_url}
-                            alt="معاينة"
-                            className="w-16 h-16 object-cover rounded border border-gray-700"
-                          />
-                          <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
-                          <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
-                            <X size={16}/>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="السعر (مثال: 150 ريال أو مجاني)"
-                      value={newService.price}
-                      onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                      className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                      disabled={isLoading}
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        type="submit"
-                        className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
-                        disabled={isLoading || (editingService ? false : !selectedCategory)}
-                      >
-                        {editingService ? (
-                          <> <Save size={20} /> حفظ التعديلات </>
-                        ) : (
-                          <> <Plus size={20} /> إضافة منتج </>
-                        )}
-                      </button>
-                      {editingService && (
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
-                          disabled={isLoading}
-                        >
-                          <X size={20} /> إلغاء
-                        </button>
-                      )}
-                    </div>
-                  </form>
-
-                  <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">المنتجات الحالية</h3>
-                  <div className="space-y-3">
-                    {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
-                    {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
-                    {services.map((service) => (
-                      <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 flex items-start gap-4 overflow-hidden">
-                            {service.image_url && (
-                              <img
-                                src={service.image_url}
-                                alt={service.title}
-                                className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
-                              />
-                            )}
-                            <div className="flex-1 overflow-hidden">
-                              <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
-                                {service.category?.name || 'قسم غير محدد'}
+                      <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">المنتجات الحالية</h3>
+                      <div className="space-y-3">
+                        {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
+                        {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
+                        {services.map((service) => (
+                          <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1 flex items-start gap-4 overflow-hidden">
+                                {service.image_url && (
+                                  <img
+                                    src={service.image_url}
+                                    alt={service.title}
+                                    className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
+                                  />
+                                )}
+                                <div className="flex-1 overflow-hidden">
+                                  <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
+                                    {service.category?.name || 'قسم غير محدد'}
+                                  </div>
+                                  <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
+                                  {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
+                                  {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
+                                </div>
                               </div>
-                              <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
-                              {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
-                              {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
+                              <div className="flex gap-3 flex-shrink-0">
+                                <button
+                                  onClick={() => !isLoading && handleEditService(service)}
+                                  title="تعديل المنتج"
+                                  className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  disabled={editingService === service.id || isLoading}
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                <button
+                                  onClick={() => !isLoading && handleDeleteService(service.id)}
+                                  title="حذف المنتج"
+                                  className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={isLoading}
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex gap-3 flex-shrink-0">
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* الأقسام */}
+                  {productsSubTab === 'categories' && (
+                    <>
+                      <form onSubmit={editingCategory ? handleUpdateCategory : handleAddCategory} className="mb-8 space-y-4" id="category-form">
+                        <input
+                          type="text"
+                          placeholder="اسم القسم"
+                          value={newCategory.name}
+                          onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          required
+                          disabled={isLoading}
+                        />
+                        <textarea
+                          placeholder="وصف القسم (اختياري)"
+                          value={newCategory.description}
+                          onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                          rows={3}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          disabled={isLoading}
+                        />
+                        <div className="flex gap-3">
+                          <button
+                            type="submit"
+                            className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                            disabled={isLoading}
+                          >
+                            {editingCategory ? (
+                              <> <Save size={20} /> حفظ التعديلات </>
+                            ) : (
+                              <> <Plus size={20} /> إضافة قسم </>
+                            )}
+                          </button>
+                          {editingCategory && (
                             <button
-                              onClick={() => !isLoading && handleEditService(service)}
-                              title="تعديل المنتج"
-                              className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-                              disabled={editingService === service.id || isLoading}
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => !isLoading && handleDeleteService(service.id)}
-                              title="حذف المنتج"
-                              className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              type="button"
+                              onClick={handleCancelEditCategory}
+                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
                               disabled={isLoading}
                             >
-                              <Trash2 size={18} />
+                              <X size={20} /> إلغاء
                             </button>
-                          </div>
+                          )}
                         </div>
+                      </form>
+
+                      <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">الأقسام الحالية</h3>
+                      <div className="space-y-3">
+                        {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
+                        {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
+                        {categories.map((category) => (
+                          <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1 overflow-hidden">
+                                <h4 className="font-bold text-white text-lg truncate" title={category.name}>{category.name}</h4>
+                                {category.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>}
+                              </div>
+                              <div className="flex gap-3 flex-shrink-0">
+                                <button
+                                  onClick={() => !isLoading && handleEditCategory(category)}
+                                  title="تعديل القسم"
+                                  className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  disabled={editingCategory === category.id || isLoading}
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                <button
+                                  onClick={() => !isLoading && handleDeleteCategory(category.id)}
+                                  title="حذف القسم"
+                                  className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={isLoading}
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
