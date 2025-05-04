@@ -1,9 +1,1 @@
-import React from 'react';
-
-export default function ThemeManager() {
-  return (
-    <div className="text-center text-gray-400">
-      إعدادات تخصيص المظهر ستتوفر قريبًا.
-    </div>
-  );
-}
+// (This file has been deleted as it is no longer in use.)

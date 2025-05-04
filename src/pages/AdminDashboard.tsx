@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Category, Service, Banner, StoreSettings } from '../types/database';
-import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, Instagram, Twitter, Palette, Store, Image, Settings, List, Package } from 'lucide-react';
-import ThemeManager from '../components/ThemeManager';
+import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, Instagram, Twitter, Palette, Store, Image, List, Package } from 'lucide-react';
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
@@ -29,7 +28,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingBanner, setEditingBanner] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'theme' | 'store' | 'banners' | 'category' | 'service' | 'settings'>('store');
+  const [activeTab, setActiveTab] = useState<'theme' | 'store' | 'banners' | 'category' | 'service'>('store');
 
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [newService, setNewService] = useState({
@@ -70,6 +69,14 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
 
+  const [themeSettings, setThemeSettings] = useState({
+    primaryColor: '#FFD700',
+    secondaryColor: '#3d2c1d',
+    backgroundColor: '#1a1a1a',
+    fontFamily: 'Cairo',
+  });
+  const [savingTheme, setSavingTheme] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,6 +87,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         await fetchData();
         await fetchStoreSettings();
         await fetchLogoUrl();
+        await fetchThemeSettings();
+        applyThemeSettings(themeSettings);
       } catch (err: any) {
         setError(`خطأ أثناء التهيئة: ${err.message}`);
       } finally {
@@ -186,6 +195,44 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     } catch (err: any) {
       setError(`خطأ في جلب إعدادات المتجر: ${err.message}`);
     }
+  };
+
+  const fetchThemeSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('store_settings')
+        .select('theme_settings')
+        .eq('id', STORE_SETTINGS_ID)
+        .single();
+      if (error) return;
+      if (data?.theme_settings) setThemeSettings(data.theme_settings);
+    } catch {}
+  };
+
+  const handleThemeSettingsSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTheme(true);
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .update({ theme_settings: themeSettings })
+        .eq('id', STORE_SETTINGS_ID);
+      if (error) throw error;
+      setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
+      applyThemeSettings(themeSettings);
+    } catch (err: any) {
+      setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
+  const applyThemeSettings = (settings: typeof themeSettings) => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary-color', settings.primaryColor);
+    root.style.setProperty('--secondary-color', settings.secondaryColor);
+    root.style.setProperty('--background-color', settings.backgroundColor);
+    root.style.setProperty('--font-family', settings.fontFamily);
   };
 
   const handleStoreSettingsUpdate = async (e: React.FormEvent) => {
@@ -822,17 +869,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
               <Package className="h-5 w-5" />
               المنتجات
             </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'settings'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
-              }`}
-            >
-              <Settings className="h-5 w-5" />
-              الإعدادات العامة
-            </button>
           </div>
 
           {/* Main Content */}
@@ -840,7 +876,73 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             {activeTab === 'theme' && (
               <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
                 <h2 className="text-xl font-bold mb-6">تخصيص المظهر</h2>
-                <ThemeManager />
+                <form onSubmit={handleThemeSettingsSave} className="space-y-6 max-w-lg mx-auto">
+                  <div>
+                    <label className="block mb-1 text-gray-300 font-medium">اللون الأساسي</label>
+                    <input
+                      type="color"
+                      value={themeSettings.primaryColor}
+                      onChange={e => setThemeSettings(s => ({ ...s, primaryColor: e.target.value }))}
+                      className="w-16 h-10 border-none rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-gray-300 font-medium">اللون الثانوي</label>
+                    <input
+                      type="color"
+                      value={themeSettings.secondaryColor}
+                      onChange={e => setThemeSettings(s => ({ ...s, secondaryColor: e.target.value }))}
+                      className="w-16 h-10 border-none rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-gray-300 font-medium">لون الخلفية</label>
+                    <input
+                      type="color"
+                      value={themeSettings.backgroundColor}
+                      onChange={e => setThemeSettings(s => ({ ...s, backgroundColor: e.target.value }))}
+                      className="w-16 h-10 border-none rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-gray-300 font-medium">الخط الرئيسي</label>
+                    <select
+                      value={themeSettings.fontFamily}
+                      onChange={e => setThemeSettings(s => ({ ...s, fontFamily: e.target.value }))}
+                      className="w-full p-2 rounded bg-black/30 text-white border border-white/10"
+                    >
+                      <option value="Cairo">Cairo</option>
+                      <option value="Tajawal">Tajawal</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Tahoma">Tahoma</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="bg-[var(--primary-color,#FFD700)] text-black px-6 py-2 rounded hover:bg-yellow-500 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      disabled={savingTheme}
+                    >
+                      <Save className="w-5 h-5" />
+                      حفظ إعدادات المظهر
+                    </button>
+                  </div>
+                </form>
+                <div className="mt-8">
+                  <h3 className="text-lg font-bold mb-2 text-gray-200">معاينة مباشرة</h3>
+                  <div
+                    className="rounded-lg p-6"
+                    style={{
+                      background: themeSettings.backgroundColor,
+                      color: themeSettings.primaryColor,
+                      fontFamily: themeSettings.fontFamily,
+                      border: `2px solid ${themeSettings.secondaryColor}`
+                    }}
+                  >
+                    <span style={{ color: themeSettings.primaryColor, fontWeight: 'bold' }}>عنوان رئيسي</span>
+                    <p style={{ color: themeSettings.secondaryColor }}>هذا مثال على نص ثانوي</p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1461,13 +1563,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                <h2 className="text-xl font-bold mb-6">الإعدادات العامة</h2>
-                {/* Add general settings content here */}
               </div>
             )}
           </div>
