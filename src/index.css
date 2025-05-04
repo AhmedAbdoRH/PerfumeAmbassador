@@ -27,20 +27,3 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
-
-button,
-.btn {
-  background-color: var(--color-secondary);
-  color: var(--color-primary);
-  /* يمكنك إضافة حدود أو تأثيرات أخرى حسب الحاجة */
-}
-
-button:disabled,
-.btn:disabled,
-button[aria-disabled="true"],
-.btn[aria-disabled="true"] {
-  background-color: var(--color-secondary);
-  color: var(--color-primary);
-  opacity: 0.6;
-  cursor: not-allowed;
-}
