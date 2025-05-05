@@ -12,7 +12,8 @@ export default function WhatsAppButton() {
                  p-4 rounded-full shadow-lg transition-all
                  text-white
                  bg-[#25D366]/30 backdrop-blur-md border border-white/10
-                 hover:bg-[#25D366]/50" // Slightly more opaque green on hover
+                 hover:bg-[#25D366]/50
+                 z-50" // Ensure it appears in the foreground
     >
       <MessageCircle className="h-6 w-6" />
     </a>
