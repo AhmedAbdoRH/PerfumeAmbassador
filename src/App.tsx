@@ -15,6 +15,7 @@ import LoadingScreen from './components/LoadingScreen';
 import type { StoreSettings } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
 
+// PrivateRoute component remains unchanged
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -34,7 +35,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated === null) {
-    return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-xl text-gray-700">جاري التحميل...</div>; // Added basic styling
   }
 
   return isAuthenticated ? (
@@ -47,14 +48,32 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  // New state to control the visibility/opacity of the main content
+  const [contentVisible, setContentVisible] = useState(false);
 
+  // Fetch settings and manage initial loading state
   useEffect(() => {
-    fetchStoreSettings();
-    // إظهار شاشة التحميل لمدة ثانيتين فقط
-    const timer = setTimeout(() => setLoading(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function initApp() {
+        await fetchStoreSettings();
+        // Wait for at least 2 seconds OR until settings are fetched, whichever is longer
+        const timer = setTimeout(() => {
+            setLoading(false); // Hide the loading screen
+        }, 2000); // Minimum 2 seconds
+        return () => clearTimeout(timer); // Cleanup timer
+    }
+    initApp();
+  }, []); // Empty dependency array means this runs once on mount
 
+  // Effect to trigger the fade-in transition when loading is complete
+  useEffect(() => {
+      if (!loading) {
+          // Set contentVisible to true right after loading becomes false
+          // This triggers the CSS transition from opacity 0 to 1
+          setContentVisible(true);
+      }
+  }, [loading]); // Depend on the loading state
+
+  // Apply theme settings to CSS variables
   useEffect(() => {
     if (storeSettings) {
       const theme = (storeSettings as any).theme_settings || {};
@@ -71,7 +90,6 @@ function App() {
       root.style.setProperty('--color-accent-light', '#e0a745');
       root.style.setProperty('--font-family', fontFamily);
 
-      // Apply background gradient or solid color globally
       if (backgroundGradient && backgroundGradient.trim() !== '') {
         root.style.setProperty('--background-gradient', backgroundGradient);
         root.style.setProperty('--background-color', '');
@@ -82,18 +100,21 @@ function App() {
     }
   }, [storeSettings]);
 
+  // Function to re-fetch settings (used by AdminDashboard)
   const fetchStoreSettings = async () => {
     const { data } = await supabase
       .from('store_settings')
       .select('*')
       .single();
-    
+
     if (data) {
       setStoreSettings(data);
     }
   };
 
+  // Layout component remains the same
   const Layout = ({ children }: { children: React.ReactNode }) => (
+    // Background styles are applied here based on fetched settings
     <div
       className="min-h-screen font-cairo"
       style={{
@@ -101,20 +122,21 @@ function App() {
           ? (storeSettings as any).theme_settings.backgroundGradient
           : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
             ? (storeSettings as any).theme_settings.backgroundColor
-            : undefined,
+            : undefined, // Let CSS handle default if neither is set
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
       }}
     >
       <Header storeSettings={storeSettings} />
+      {/* The actual page content goes here */}
       {children}
       <Footer storeSettings={storeSettings} />
       <WhatsAppButton />
     </div>
   );
 
-  // شاشة التحميل تظهر فوق كل شيء
+  // Render loading screen while loading is true
   if (loading) {
     return (
       <LoadingScreen
@@ -124,8 +146,10 @@ function App() {
     );
   }
 
+  // Render main application content when loading is false
   return (
     <ThemeProvider>
+      {/* Helmet for SEO meta tags */}
       <Helmet>
         <title>{storeSettings?.meta_title || storeSettings?.store_name || ' '}</title>
         <meta name="description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
@@ -142,32 +166,50 @@ function App() {
         <meta property="og:description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
         <meta property="og:type" content="website" />
       </Helmet>
-      <Router>
-        <Routes>
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={
-            <PrivateRoute>
-              <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
-            </PrivateRoute>
-          } />
-          <Route path="/service/:id" element={
-            <Layout>
-              <ServiceDetails />
-            </Layout>
-          } />
-          <Route path="/category/:categoryId" element={
-            <Layout>
-              <CategoryProducts />
-            </Layout>
-          } />
-          <Route path="/" element={
-            <Layout>
-              <Hero storeSettings={storeSettings} />
-              <Services />
-            </Layout>
-          } />
-        </Routes>
-      </Router>
+
+      {/* Wrapper div for the fade-in transition */}
+      {/* Apply opacity and transition based on contentVisible state */}
+      <div
+          style={{
+              opacity: contentVisible ? 1 : 0, // Opacity is 0 initially, 1 when contentVisible is true
+              transition: 'opacity 1500ms ease-in-out', // Apply a 1.5 second fade transition
+              // Ensure the wrapper doesn't collapse and covers the screen if needed
+              minHeight: '100vh',
+              width: '100%',
+          }}
+      >
+        <Router>
+          <Routes>
+            {/* Admin Routes (consider if you want these to fade in too or appear instantly) */}
+            {/* Currently included in the faded wrapper */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={
+              <PrivateRoute>
+                <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
+              </PrivateRoute>
+            } />
+
+            {/* Public Routes using the Layout component */}
+            {/* These are also inside the faded wrapper */}
+            <Route path="/service/:id" element={
+              <Layout>
+                <ServiceDetails />
+              </Layout>
+            } />
+            <Route path="/category/:categoryId" element={
+              <Layout>
+                <CategoryProducts />
+              </Layout>
+            } />
+            <Route path="/" element={
+              <Layout>
+                <Hero storeSettings={storeSettings} />
+                <Services />
+              </Layout>
+            } />
+          </Routes>
+        </Router>
+      </div> {/* End of fade-in wrapper */}
     </ThemeProvider>
   );
 }
