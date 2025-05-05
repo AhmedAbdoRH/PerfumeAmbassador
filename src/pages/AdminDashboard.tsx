@@ -777,7 +777,14 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-[${brownDark}] to-black text-gray-200 font-[Cairo]`} dir="rtl">
+    <div
+      className="min-h-screen font-[Cairo]"
+      style={{
+        background: "linear-gradient(135deg, #232526 0%, #414345 100%)",
+        color: "#fff"
+      }}
+      dir="rtl"
+    >
       {deleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -850,56 +857,56 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           {/* Side Tabs */}
           <div className="space-y-2">
             <button
+              onClick={() => setActiveTab('products')}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'products'
+                  ? 'bg-accent text-primary'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              <Package className="h-5 w-5" />
+              <span className="text-white">إدارة المنتجات</span>
+            </button>
+            <button
               onClick={() => setActiveTab('store')}
               className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                 activeTab === 'store'
                   ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
+                  : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
               <Store className="h-5 w-5" />
-              إعدادات المتجر
+              <span className="text-white">إعدادات المتجر</span>
             </button>
             <button
               onClick={() => setActiveTab('banners')}
               className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                 activeTab === 'banners'
                   ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
+                  : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
               <Image className="h-5 w-5" />
-              البانرات
-            </button>
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'products'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
-              }`}
-            >
-              <Package className="h-5 w-5" />
-              إدارة المنتجات
+              <span className="text-white">البانرات</span>
             </button>
             <button
               onClick={() => setActiveTab('theme')}
               className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                 activeTab === 'theme'
                   ? 'bg-accent text-primary'
-                  : 'bg-white/5 text-secondary hover:bg-white/10'
+                  : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
               <Palette className="h-5 w-5" />
-              تخصيص المظهر
+              <span className="text-white">تخصيص المظهر</span>
             </button>
           </div>
 
           {/* Main Content */}
           <div className="md:col-span-3">
             {activeTab === 'theme' && (
-              <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                <h2 className="text-xl font-bold mb-6">تخصيص المظهر</h2>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
+                <h2 className="text-xl font-bold mb-6 text-white">تخصيص المظهر</h2>
                 <form onSubmit={handleThemeSettingsSave} className="space-y-6 max-w-lg mx-auto">
                   <div>
                     <label className="block mb-1 text-gray-300 font-medium">اللون الأساسي</label>
@@ -1067,12 +1074,12 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             )}
 
             {activeTab === 'store' && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
                 <div className="p-6 border-t border-white/10">
                   <form onSubmit={handleStoreSettingsUpdate} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">اسم المتجر</label>
+                        <label className="block text-sm font-medium text-white mb-1">اسم المتجر</label>
                         <input
                           type="text"
                           value={storeSettings.store_name || ''}
@@ -1082,7 +1089,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">وصف المتجر</label>
+                        <label className="block text-sm font-medium text-white mb-1">وصف المتجر</label>
                         <input
                           type="text"
                           value={storeSettings.store_description || ''}
@@ -1096,7 +1103,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Logo Upload */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">شعار المتجر</label>
+                        <label className="block text-sm font-medium text-white mb-1">شعار المتجر</label>
                         <div className="relative">
                           <input
                             type="file"
@@ -1124,7 +1131,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
                       {/* Favicon Upload */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">أيقونة المتصفح</label>
+                        <label className="block text-sm font-medium text-white mb-1">أيقونة المتصفح</label>
                         <div className="relative">
                           <input
                             type="file"
@@ -1152,7 +1159,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
                       {/* OG Image Upload */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">صورة المشاركة</label>
+                        <label className="block text-sm font-medium text-white mb-1">صورة المشاركة</label>
                         <div className="relative">
                           <input
                             type="file"
@@ -1181,7 +1188,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">عنوان الصفحة</label>
+                        <label className="block text-sm font-medium text-white mb-1">عنوان الصفحة</label>
                         <input
                           type="text"
                           value={storeSettings.meta_title || ''}
@@ -1191,7 +1198,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">وصف الصفحة</label>
+                        <label className="block text-sm font-medium text-white mb-1">وصف الصفحة</label>
                         <input
                           type="text"
                           value={storeSettings.meta_description || ''}
@@ -1203,7 +1210,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">الكلمات المفتاحية (مفصولة بفواصل)</label>
+                      <label className="block text-sm font-medium text-white mb-1">الكلمات المفتاحية (مفصولة بفواصل)</label>
                       <input
                         type="text"
                         value={storeSettings.keywords?.join(', ') || ''}
@@ -1215,7 +1222,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">رابط فيسبوك</label>
+                        <label className="block text-sm font-medium text-white mb-1">رابط فيسبوك</label>
                         <input
                           type="url"
                           value={storeSettings.facebook_url || ''}
@@ -1225,7 +1232,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">رابط انستغرام</label>
+                        <label className="block text-sm font-medium text-white mb-1">رابط انستغرام</label>
                         <input
                           type="url"
                           value={storeSettings.instagram_url || ''}
@@ -1235,7 +1242,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">رابط تويتر</label>
+                        <label className="block text-sm font-medium text-white mb-1">رابط تويتر</label>
                         <input
                           type="url"
                           value={storeSettings.twitter_url || ''}
@@ -1245,7 +1252,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">رابط سناب شات</label>
+                        <label className="block text-sm font-medium text-white mb-1">رابط سناب شات</label>
                         <input
                           type="url"
                           value={storeSettings.snapchat_url || ''}
@@ -1255,7 +1262,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">رابط تيك توك</label>
+                        <label className="block text-sm font-medium text-white mb-1">رابط تيك توك</label>
                         <input
                           type="url"
                           value={storeSettings.tiktok_url || ''}
@@ -1282,7 +1289,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             )}
 
             {activeTab === 'banners' && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
                 <div className="p-6 border-t border-white/10">
                   <form onSubmit={editingBanner ? handleUpdateBanner : handleAddBanner} className="mb-8 space-y-4">
                     <div className="flex gap-4">
@@ -1398,7 +1405,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     </div>
                   </form>
 
-                  <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">البانرات الحالية</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">البانرات الحالية</h3>
                   <div className="space-y-3">
                     {!isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد بانرات لعرضها.</p>}
                     {isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل البانرات...</p>}
@@ -1455,7 +1462,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             )}
 
             {activeTab === 'products' && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
                 <div className="p-6 border-t border-white/10">
                   {/* تبويبات فرعية */}
                   <div className="flex mb-6 gap-2">
@@ -1580,7 +1587,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         </div>
                       </form>
 
-                      <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">المنتجات الحالية</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">المنتجات الحالية</h3>
                       <div className="space-y-3">
                         {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
                         {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
@@ -1675,7 +1682,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         </div>
                       </form>
 
-                      <h3 className="text-lg font-semibold mb-4 text-gray-300 border-b border-gray-700 pb-2">الأقسام الحالية</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">الأقسام الحالية</h3>
                       <div className="space-y-3">
                         {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
                         {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
