@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
-// Define constants for timings for easier adjustment
-const FADE_START_DELAY = 1800; // ms - When fade-out transition starts (Keep as is or adjust)
-// INCREASED HIDE_DELAY for slower fade-out
-const HIDE_DELAY = 3000;       // ms - Increase this value for a slower fade (e.g., 3000ms = 3 seconds total visibility before hiding)
-const FADE_OUT_DURATION_MS = HIDE_DELAY - FADE_START_DELAY; // Duration of the fade-out CSS transition (Now 1200ms)
+// --- التوقيت المعدل ---
+const FADE_START_DELAY = 1500; // مللي ثانية - بدء التلاشي للخارج مبكرًا
+const HIDE_DELAY = 3000;       // مللي ثانية - المدة الإجمالية للظهور هي 3 ثوانٍ
+const FADE_OUT_DURATION_MS = HIDE_DELAY - FADE_START_DELAY; // مدة التلاشي للخارج (الآن 1500 مللي ثانية = 1.5 ثانية)
 
 export default function LoadingScreen({
-  logoUrl = '/logo.png', // Default logo path remains
+  logoUrl = '/logo.png',
   onFinish,
 }: {
   logoUrl?: string;
@@ -15,59 +14,76 @@ export default function LoadingScreen({
 }) {
   const [show, setShow] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
-  const [initialRender, setInitialRender] = useState(true); // To control initial style
+  // --- حالة جديدة لتحميل الصورة ---
+  const [imageLoaded, setImageLoaded] = useState(false);
 
+  // Effect للمؤقتات وتحميل الصورة المسبق
   useEffect(() => {
-    // Use a minimal timeout or requestAnimationFrame to ensure initial styles apply first
-    const initTimer = requestAnimationFrame(() => {
-        setInitialRender(false); // Allow animation class to take full effect
-    });
+    let isMounted = true; // علم لمنع تحديثات الحالة على مكون غير مُركّب
 
-    // Start fade out before hiding
-    const timer1 = setTimeout(() => setFadeOut(true), FADE_START_DELAY);
-    // Hide component and trigger callback
+    // --- منطق تحميل الصورة المسبق ---
+    const img = new Image();
+    img.onload = () => {
+      if (isMounted) {
+        setImageLoaded(true); // تعيين الحالة عند تحميل الصورة
+      }
+    };
+    img.onerror = () => {
+      // اختياري: معالجة خطأ تحميل الصورة، ربما عرض أيقونة افتراضية أو إخفاء أسرع
+      console.error("فشل تحميل شعار شاشة التحميل:", logoUrl);
+      if (isMounted) {
+        // قرر كيفية التعامل مع الخطأ: ربما المتابعة بدون شعار، أو استخدام بديل
+         setImageLoaded(true); // أو تعيين حالة أخرى لإظهار خطأ/بديل
+      }
+    };
+    img.src = logoUrl; // بدء تحميل الصورة
+
+    // --- المؤقتات ---
+    const timer1 = setTimeout(() => {
+        if (isMounted) setFadeOut(true);
+    }, FADE_START_DELAY);
+
     const timer2 = setTimeout(() => {
-      setShow(false);
-      onFinish?.();
+      if (isMounted) {
+        setShow(false);
+        onFinish?.();
+      }
     }, HIDE_DELAY);
 
-    // Cleanup timers on component unmount
+    // دالة التنظيف
     return () => {
-      cancelAnimationFrame(initTimer); // Clean up animation frame request
+      isMounted = false; // وضع علامة على أنه غير مُركّب
       clearTimeout(timer1);
       clearTimeout(timer2);
+      // اختياري: مسح معالجات الصور إذا لزم الأمر
+      img.onload = null;
+      img.onerror = null;
     };
-  }, [onFinish]);
+  }, [logoUrl, onFinish]); // إضافة logoUrl إلى مصفوفة الاعتماديات
 
-  // Don't render anything if show is false
+  // لا تعرض أي شيء إذا كانت show خاطئة
   if (!show) return null;
 
   return (
     <div
-      // Full screen overlay with background gradient
-      // Opacity transition handles the final fade-out of the whole screen
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#232526] to-[#414345] transition-opacity ease-in-out ${
+      // الحاوية الرئيسية: تعالج الخلفية والتلاشي الكلي للخارج
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#232526] to-[#414345] transition-opacity ease-in-out ${ // التأكد من استخدام easing سلس
         fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
-      style={{ transitionDuration: `${FADE_OUT_DURATION_MS}ms` }} // Set duration dynamically
+      style={{ transitionDuration: `${FADE_OUT_DURATION_MS}ms` }} // استخدام المدة الأبطأ المحسوبة
     >
-      {/* Logo Image */}
-      <img
-        src={logoUrl}
-        alt="Loading Logo" // Alt text is important for accessibility
-        // Apply animation class conditionally + base styles
-        className={`w-32 h-32 sm:w-40 sm:h-40 object-contain ${!initialRender ? 'logo-animate' : ''}`}
-        // --- KEY CHANGE HERE ---
-        // Set initial opacity to 0 and color to transparent inline
-        // This prevents flicker of alt text or broken image icon
-        style={{
-            opacity: initialRender ? 0 : undefined, // Start fully transparent
-            color: 'transparent', // Hide alt text color just in case
-        }}
-      />
+      {/* --- عرض الصورة بشكل شرطي فقط عند تحميلها --- */}
+      {imageLoaded && (
+        <img
+          src={logoUrl}
+          alt="Loading Logo"
+          // تطبيق الرسوم المتحركة مباشرة الآن بعد أن علمنا أن الصورة قد تم تحميلها
+          className="w-32 h-32 sm:w-40 sm:h-40 object-contain logo-animate"
+          // لا حاجة لحيل الشفافية المضمنة بعد الآن
+        />
+      )}
 
-      {/* Inline style tag for custom Keyframes animations */}
-      {/* (Keyframes definitions remain the same as before) */}
+      {/* --- الأنماط (تبقى keyframes كما هي) --- */}
       <style>{`
         @keyframes fade-in-scale-up {
           0% {
@@ -91,15 +107,12 @@ export default function LoadingScreen({
           }
         }
 
+        /* فئة الرسوم المتحركة المطبقة على وسم img بمجرد عرضه */
         .logo-animate {
-          /* Animations applied via this class */
           animation:
-            fade-in-scale-up 0.8s cubic-bezier(.4,0,.2,1) forwards,
-            pulse-glow 2.5s infinite ease-in-out 0.8s;
+            fade-in-scale-up 0.8s cubic-bezier(.4,0,.2,1) forwards, /* رسوم الدخول */
+            pulse-glow 2.5s infinite ease-in-out 0.8s; /* النبض المستمر، يبدأ بعد الدخول */
           will-change: transform, opacity, filter;
-
-           /* Explicitly set opacity to 1 to override inline style if needed, though 'forwards' should handle it */
-           /* opacity: 1; */ /* Usually not needed due to animation 'forwards' */
         }
       `}</style>
     </div>
