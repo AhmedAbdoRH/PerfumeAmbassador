@@ -10,6 +10,7 @@ import WhatsAppButton from './components/WhatsAppButton';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceDetails from './pages/ServiceDetails';
+import CategoryProducts from './pages/CategoryProducts';
 import type { StoreSettings } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
 
@@ -50,7 +51,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // تطبيق ألوان المظهر من إعدادات المتجر (theme_settings أو fallback)
     if (storeSettings) {
       const theme = (storeSettings as any).theme_settings || {};
       const primary = theme.primaryColor || '#c7a17a';
@@ -66,7 +66,6 @@ function App() {
       root.style.setProperty('--color-accent-light', '#e0a745');
       root.style.setProperty('--font-family', fontFamily);
 
-      // دعم التدرج اللوني للخلفية أو اللون الثابت
       if (backgroundGradient && backgroundGradient.trim() !== '') {
         root.style.setProperty('--background-gradient', backgroundGradient);
         root.style.setProperty('--background-color', '');
@@ -87,6 +86,24 @@ function App() {
       setStoreSettings(data);
     }
   };
+
+  const Layout = ({ children }: { children: React.ReactNode }) => (
+    <div
+      className="min-h-screen font-cairo"
+      style={{
+        background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
+          ? (storeSettings as any).theme_settings.backgroundGradient
+          : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
+            ? (storeSettings as any).theme_settings.backgroundColor
+            : undefined,
+      }}
+    >
+      <Header storeSettings={storeSettings} />
+      {children}
+      <Footer storeSettings={storeSettings} />
+      <WhatsAppButton />
+    </div>
+  );
 
   return (
     <ThemeProvider>
@@ -115,30 +132,20 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/service/:id" element={
-            <>
-              <Header storeSettings={storeSettings} />
+            <Layout>
               <ServiceDetails />
-              <Footer storeSettings={storeSettings} />
-              <WhatsAppButton />
-            </>
+            </Layout>
+          } />
+          <Route path="/category/:categoryId" element={
+            <Layout>
+              <CategoryProducts />
+            </Layout>
           } />
           <Route path="/" element={
-            <div
-              className="min-h-screen font-cairo"
-              style={{
-                background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
-                  ? (storeSettings as any).theme_settings.backgroundGradient
-                  : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
-                    ? (storeSettings as any).theme_settings.backgroundColor
-                    : undefined,
-              }}
-            >
-              <Header storeSettings={storeSettings} />
+            <Layout>
               <Hero storeSettings={storeSettings} />
               <Services />
-              <Footer storeSettings={storeSettings} />
-              <WhatsAppButton />
-            </div>
+            </Layout>
           } />
         </Routes>
       </Router>
