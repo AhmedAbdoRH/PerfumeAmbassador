@@ -11,6 +11,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceDetails from './pages/ServiceDetails';
 import CategoryProducts from './pages/CategoryProducts';
+import LoadingScreen from './components/LoadingScreen';
 import type { StoreSettings } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
 
@@ -45,9 +46,13 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStoreSettings();
+    // إظهار شاشة التحميل لمدة ثانيتين فقط
+    const timer = setTimeout(() => setLoading(false), 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -108,6 +113,16 @@ function App() {
       <WhatsAppButton />
     </div>
   );
+
+  // شاشة التحميل تظهر فوق كل شيء
+  if (loading) {
+    return (
+      <LoadingScreen
+        logoUrl={storeSettings?.logo_url || '/logo.png'}
+        storeName={storeSettings?.store_name || 'متجر العطور'}
+      />
+    );
+  }
 
   return (
     <ThemeProvider>
