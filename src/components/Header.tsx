@@ -83,4 +83,4 @@ export default function Header({ storeSettings }: HeaderProps) {
       </div>
     </header>
   );
-}س
+}
