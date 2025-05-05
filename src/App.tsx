@@ -88,6 +88,27 @@ function App() {
     }
   };
 
+  const Layout = ({ children }: { children: React.ReactNode }) => (
+    <div
+      className="min-h-screen font-cairo"
+      style={{
+        background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
+          ? (storeSettings as any).theme_settings.backgroundGradient
+          : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
+            ? (storeSettings as any).theme_settings.backgroundColor
+            : undefined,
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      <Header storeSettings={storeSettings} />
+      {children}
+      <Footer storeSettings={storeSettings} />
+      <WhatsAppButton />
+    </div>
+  );
+
   return (
     <ThemeProvider>
       <Helmet>
@@ -115,33 +136,20 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/service/:id" element={
-            <>
-              <Header storeSettings={storeSettings} />
+            <Layout>
               <ServiceDetails />
-              <Footer storeSettings={storeSettings} />
-              <WhatsAppButton />
-            </>
+            </Layout>
+          } />
+          <Route path="/category/:categoryId" element={
+            <Layout>
+              <CategoryProducts />
+            </Layout>
           } />
           <Route path="/" element={
-            <div
-              className="min-h-screen font-cairo"
-              style={{
-                background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
-                  ? (storeSettings as any).theme_settings.backgroundGradient
-                  : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
-                    ? (storeSettings as any).theme_settings.backgroundColor
-                    : undefined,
-                backgroundSize: 'cover',
-                backgroundRepeat: 'no-repeat',
-                backgroundAttachment: 'fixed',
-              }}
-            >
-              <Header storeSettings={storeSettings} />
+            <Layout>
               <Hero storeSettings={storeSettings} />
               <Services />
-              <Footer storeSettings={storeSettings} />
-              <WhatsAppButton />
-            </div>
+            </Layout>
           } />
         </Routes>
       </Router>
