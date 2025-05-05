@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { Helmetac } from 'react-helmet-async';
 import { supabase } from './lib/supabase';
 import Header from './components/Header';
 import Hero from './components/Hero';
