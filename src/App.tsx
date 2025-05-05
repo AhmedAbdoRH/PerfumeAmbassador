@@ -112,7 +112,7 @@ function App() {
   return (
     <ThemeProvider>
       <Helmet>
-        <title>{storeSettings?.meta_title || storeSettings?.store_name || 'سفير العطور'}</title>
+        <title>{storeSettings?.meta_title || storeSettings?.store_name || ' '}</title>
         <meta name="description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
         {storeSettings?.keywords && storeSettings.keywords.length > 0 && (
           <meta name="keywords" content={storeSettings.keywords.join(', ')} />

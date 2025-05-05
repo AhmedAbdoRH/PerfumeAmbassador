@@ -53,10 +53,10 @@ export default function Hero({ storeSettings }: HeroProps) {
               <Sparkles className={`h-12 w-12 sm:h-16 sm:w-16 text-[${lightGold}]`} />
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-center text-white">
-              {storeSettings?.store_name || banner?.title || 'عطور فاخرة تلامس أحاسيسك'}
+              {storeSettings?.store_name || banner?.title || }
             </h1>
             <p className="text-lg sm:text-xl mb-8 text-center text-gray-300">
-              {storeSettings?.store_description || banner?.description || 'اكتشف تشكيلة مميزة من أجود أنواع العطور الشرقية والعالمية'}
+              {storeSettings?.store_description || banner?.description ||}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
