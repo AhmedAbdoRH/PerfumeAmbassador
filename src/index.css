@@ -22,11 +22,18 @@ body {
   font-family: var(--font-family, 'Cairo', sans-serif);
   background-color: var(--background-color, #000000);
   color: var(--color-secondary, #ffffff);
-  /* دعم التدرج اللوني للخلفية */
+  /* Apply gradient or solid background globally */
   background-image: var(--background-gradient, none);
   background-size: cover;
   background-repeat: no-repeat;
   background-attachment: fixed;
+}
+
+/* Ensure all sections and containers inherit the global styles */
+section, div, header, footer {
+  background-color: var(--background-color, #000000);
+  color: var(--color-secondary, #ffffff);
+  background-image: var(--background-gradient, none);
 }
 
 .glass {

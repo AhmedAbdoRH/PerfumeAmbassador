@@ -66,6 +66,7 @@ function App() {
       root.style.setProperty('--color-accent-light', '#e0a745');
       root.style.setProperty('--font-family', fontFamily);
 
+      // Apply background gradient or solid color globally
       if (backgroundGradient && backgroundGradient.trim() !== '') {
         root.style.setProperty('--background-gradient', backgroundGradient);
         root.style.setProperty('--background-color', '');
@@ -96,6 +97,9 @@ function App() {
           : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
             ? (storeSettings as any).theme_settings.backgroundColor
             : undefined,
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
       }}
     >
       <Header storeSettings={storeSettings} />
