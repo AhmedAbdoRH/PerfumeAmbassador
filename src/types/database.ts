@@ -5,7 +5,7 @@ export interface Category {
   created_at: string;
 }
 
-export interface Service {
+export interface Product {
   id: number;
   category_id: string;
   title: string;

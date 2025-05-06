@@ -1,5 +1,5 @@
 /*
-  # Update services and categories schema
+  # Update products and categories schema
 
   1. Tables
     - Safely create `categories` if not exists
@@ -7,7 +7,7 @@
       - `name` (text, required)
       - `description` (text)
       - `created_at` (timestamp)
-    - Safely create `services` if not exists
+    - Safely create `products` if not exists
       - `id` (uuid, primary key)
       - `category_id` (uuid, foreign key to categories)
       - `title` (text, required)
@@ -35,11 +35,11 @@ BEGIN
   END IF;
 END $$;
 
--- Safe creation of services table
+-- Safe creation of products table
 DO $$ 
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'services') THEN
-    CREATE TABLE services (
+  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'products') THEN
+    CREATE TABLE products (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
       title text NOT NULL,
@@ -53,14 +53,14 @@ END $$;
 
 -- Enable RLS (safe to run multiple times)
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DO $$ 
 BEGIN
   -- Categories policies
   DROP POLICY IF EXISTS "Allow public to view categories" ON categories;
-  DROP POLICY IF EXISTS "Allow authenticated to manage categories" ON categories;
+    DROP POLICY IF EXISTS "Allow authenticated to manage categories" ON categories;
   
   -- Services policies
   DROP POLICY IF EXISTS "Allow public to view services" ON services;
@@ -79,13 +79,13 @@ TO authenticated
 USING (true) 
 WITH CHECK (true);
 
-CREATE POLICY "Allow public to view services" 
-ON services FOR SELECT 
+CREATE POLICY "Allow public to view products" 
+ON products FOR SELECT 
 TO public 
 USING (true);
 
-CREATE POLICY "Allow authenticated to manage services" 
-ON services FOR ALL 
+CREATE POLICY "Allow authenticated to manage products" 
+ON products FOR ALL 
 TO authenticated 
 USING (true) 
 WITH CHECK (true);

@@ -4,12 +4,12 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from './lib/supabase';
 import Header from './components/Header';
 import Hero from './components/Hero';
-import Services from './components/Services';
+import Products from './components/Products';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import ServiceDetails from './pages/ServiceDetails';
+import ProductDetails from './pages/ProductDetails';
 import CategoryProducts from './pages/CategoryProducts';
 import LoadingScreen from './components/LoadingScreen';
 import type { StoreSettings } from './types/database';
@@ -191,9 +191,9 @@ function App() {
 
             {/* Public Routes using the Layout component */}
             {/* These are also inside the faded wrapper */}
-            <Route path="/service/:id" element={
+            <Route path="/product/:id" element={
               <Layout>
-                <ServiceDetails />
+                <ProductDetails />
               </Layout>
             } />
             <Route path="/category/:categoryId" element={
@@ -204,7 +204,7 @@ function App() {
             <Route path="/" element={
               <Layout>
                 <Hero storeSettings={storeSettings} />
-                <Services />
+                <Products />
               </Layout>
             } />
           </Routes>
