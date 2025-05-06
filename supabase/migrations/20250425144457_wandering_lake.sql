@@ -1,40 +1,38 @@
 /*
-  # Add storage bucket and policies for products
+  # Add storage bucket and policies for services
 
   1. Storage Setup
-    - Create 'products' storage bucket if it doesn't exist
+    - Create 'services' storage bucket if it doesn't exist
     - Enable RLS on the bucket
   
   2. Security
-    - Add policy to allow authenticated users to upload product files
-    - Add policy to allow authenticated users to update product files
-    - Add policy to allow authenticated users to delete product files
-    - Add policy to allow public read access to product files
+    - Add policy to allow authenticated users to upload files
+    - Add policy to allow public read access to files
 */
 
 -- Create the storage bucket if it doesn't exist
 insert into storage.buckets (id, name, public)
-values ('products', 'products', true)
+values ('services', 'services', true)
 on conflict (id) do nothing;
 
 -- Enable RLS
 alter table storage.objects enable row level security;
 
 -- Create policy to allow authenticated users to upload files
-create policy "Allow authenticated users to upload product files"
+create policy "Allow authenticated users to upload files"
 on storage.objects for insert
 to authenticated
 with check (
-  bucket_id = 'products'
+  bucket_id = 'services'
   and owner = auth.uid()
 );
 
 -- Create policy to allow authenticated users to update their files
-create policy "Allow authenticated users to update their product files"
+create policy "Allow authenticated users to update their files"
 on storage.objects for update
 to authenticated
 using (
-  bucket_id = 'products'
+  bucket_id = 'services'
   and owner = auth.uid()
 )
 with check (
@@ -42,17 +40,17 @@ with check (
   and owner = auth.uid()
 );
 
--- Create policy to allow authenticated users to delete their product files
-create policy "Allow authenticated users to delete their product files"
+-- Create policy to allow authenticated users to delete their files
+create policy "Allow authenticated users to delete their files"
 on storage.objects for delete
 to authenticated
 using (
-  bucket_id = 'products'
+  bucket_id = 'services'
   and owner = auth.uid()
 );
 
 -- Create policy to allow public read access to files
-create policy "Allow public read access to product files"
+create policy "Allow public read access to files"
 on storage.objects for select
 to public
-using (bucket_id = 'products');
+using (bucket_id = 'services');

@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Replace with your actual Supabase project URL and anon key
-const supabaseUrl = import.meta.env.postgresql://postgres:[YOUR-PASSWORD]@db.vmrhpcgobywlwxohcyec.supabase.co:5432/postgres
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtcmhwY2dvYnl3bHd4b2hjeWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4NTg0OTEsImV4cCI6MjA1OTQzNDQ5MX0.DN15Ych0RcC0UvMszPKCxUdNfpagnW2WvVDYQsiG4aA as string;
-const supabaseAnonKey = import.meta.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtcmhwY2dvYnl3bHd4b2hjeWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4NTg0OTEsImV4cCI6MjA1OTQzNDQ5MX0.DN15Ych0RcC0UvMszPKCxUdNfpagnW2WvVDYQsiG4aA as string;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your .env file.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

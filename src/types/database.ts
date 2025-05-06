@@ -1,71 +1,43 @@
-import { Timestamp } from "firebase/firestore";
-
-export interface Category{
+export interface Category {
   id: string;
   name: string;
-  description?: string;
-  created_at: Timestamp;
+  description: string | null;
+  created_at: string;
 }
 
-export interface Product {
-  id: string;
-  category_id:  {
-    path: string;
-  };
+export interface Service {
+  id: number;
+  category_id: string;
   title: string;
-  description?: string;
-  image_url?: string;
-  price?: string;
-  created_at: Timestamp;
-}
-
-export interface Order {
-  id: string;
-  user_id: {
-    path: string;
-  };
-  product_id: {
-    path: string;
-  };
-  amount: number;
-  currency: string;
-  status: string;
-  payment_id?: string;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-}
-
-export interface Profile{
-  id: string;
-  full_name?: string;
-  phone?: string;
-  created_at: Timestamp;
+  description: string | null;
+  image_url: string | null;
+  price: string | null;
+  created_at: string;
+  category?: Category;
 }
 
 export interface Banner {
   id: string;
   type: 'image' | 'text';
-  title?: string;
-  description?: string;
-  image_url?: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
   is_active: boolean;
-  created_at: Timestamp;
+  created_at: string;
 }
 
 export interface StoreSettings {
   id: string;
-  store_name?: string;
-  store_description?: string;
-  logo_url?: string;
-  favicon_url?: string;
-  og_image_url?: string;
-  meta_title?: string;
-  meta_description?: string;
-  keywords?: string[];
-  facebook_url?: string;
-  instagram_url?: string;
-  twitter_url?: string;
-  snapchat_url?: string;
-  tiktok_url?: string;
-  updated_at: Timestamp;
+  store_name: string | null;
+  store_description: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  og_image_url: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  keywords: string[] | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  twitter_url: string | null;
+  updated_at: string;
 }
