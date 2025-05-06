@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import ProductCard from './ProductCard';
-import { supabase } from '../lib/supabase';
 import type { Product, Category } from '../types/database';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
@@ -18,13 +20,14 @@ export default function Products() {
     fetchCategories();
   }, []);
 
+
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
+      const querySnapshot = await getDocs(collection(db, "categories"));
+      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
+      const error = null;
+
+
       if (error) throw error;
       setCategories(data || []);
     } catch (err: any) {
@@ -37,14 +40,11 @@ export default function Products() {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          category:categories(*)
-        `)
-        .order('created_at', { ascending: false });
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Product[];
+      const error = null;
 
+      
       if (error) throw error;
       setProducts(data || []);
     } catch (err: any) {
@@ -55,7 +55,7 @@ export default function Products() {
   };
 
   const filteredProducts = selectedCategory
-    ? products.filter(product => product.category_id === selectedCategory)
+    ? products.filter(product => product.category_id?.includes(selectedCategory))
     : products;
 
   if (isLoading) {

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from './lib/supabase';
-import Header from './components/Header';
 import Hero from './components/Hero';
 import Products from './components/Products';
 import Footer from './components/Footer';
@@ -14,6 +13,10 @@ import CategoryProducts from './pages/CategoryProducts';
 import LoadingScreen from './components/LoadingScreen';
 import type { StoreSettings } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { db } from './lib/firebase';
+import Header from './components/Header';
+
 
 // PrivateRoute component remains unchanged
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -102,13 +105,18 @@ function App() {
 
   // Function to re-fetch settings (used by AdminDashboard)
   const fetchStoreSettings = async () => {
-    const { data } = await supabase
-      .from('store_settings')
-      .select('*')
-      .single();
+    try {
+      const storeSettingsQuery = query(collection(db, 'store_settings'), orderBy("updated_at", "desc"), limit(1));
+      const querySnapshot = await getDocs(storeSettingsQuery);
 
-    if (data) {
-      setStoreSettings(data);
+      querySnapshot.forEach((doc) => {
+        setStoreSettings(doc.data() as StoreSettings);
+      });
+    } catch (error) {
+      console.error('Error fetching store settings:', error);
+    }
+    if(!storeSettings){
+      setLoading(false)
     }
   };
 

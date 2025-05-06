@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
-import type { Product, Category } from '../types/database';
+import type { Category } from '../types/database';
+import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+interface Product {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  price: string;
+}
 
 export default function CategoryProducts() {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -22,21 +31,31 @@ export default function CategoryProducts() {
       setIsLoading(true);
       setError(null);
 
-      // Fetch category details
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('id', categoryId)
-        .single();
+      // Fetch products for this category from Firestore
+      const productsQuery = query(
+        collection(db, 'products'),
+        where('category_id', '==', `categories/${categoryId}`)
+      );
 
-      if (categoryError) throw categoryError;
+      const productsSnapshot = await getDocs(productsQuery);
+      const productsData: Product[] = productsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title,
+        description: doc.data().description || '',
+        imageUrl: doc.data().image_url || '',
+        price: doc.data().price || '',
+      }));
+      setProducts(productsData);
+
+      const categoryQuery = query(
+        collection(db, 'categories'),
+        where('id', '==', categoryId)
+      );
+      const categorySnapshot = await getDocs(categoryQuery)
+      const categoryData = categorySnapshot.docs.map((doc) => doc.data())[0] as Category
+      
+      if (!categoryData) throw Error()
       setCategory(categoryData);
-
-      // Fetch services for this category
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category_id', categoryId);
 
       if (productsError) throw productsError;
       setProducts(productsData || []);
@@ -92,12 +111,12 @@ export default function CategoryProducts() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {products.map((product) => (
                 <ProductCard
-                  key={service.id}
-                  id={service.id}
-                  title={service.title}
-                  description={service.description || ''}
-                  imageUrl={service.image_url || ''}
-                  price={service.price || ''}
+                  key={product.id}
+                  id={product.id}
+                  title={product.title}
+                  description={product.description || ''}
+                  imageUrl={product.imageUrl || ''}
+                  price={product.price || ''}
                 />
               ))}
             </div>
