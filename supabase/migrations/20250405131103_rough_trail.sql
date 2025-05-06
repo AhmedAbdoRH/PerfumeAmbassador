@@ -1,8 +1,8 @@
 /*
-  # Create services table
+  # Create products table
 
   1. New Tables
-    - `services`
+    - `products`
       - `id` (serial, primary key)
       - `title` (text)
       - `description` (text)
@@ -11,48 +11,48 @@
       - `created_at` (timestamp)
 
   2. Security
-    - Enable RLS on `services` table
-    - Add policies for authenticated users to manage services
+    - Enable RLS on `products` table 
+    - Add policies for authenticated users to manage products
 */
 
-CREATE TABLE IF NOT EXISTS services (
+CREATE TABLE IF NOT EXISTS products(
   id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
+    title TEXT NOT NULL,
   description TEXT NOT NULL,
   image_url TEXT NOT NULL,
   price TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow authenticated users to read services"
-  ON services
+CREATE POLICY "Allow authenticated users to read products"
+  ON products
   FOR SELECT
   TO authenticated
   USING (true);
 
-CREATE POLICY "Allow authenticated users to insert services"
-  ON services
+CREATE POLICY "Allow authenticated users to insert products"
+  ON products
   FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
-CREATE POLICY "Allow authenticated users to update services"
-  ON services
+CREATE POLICY "Allow authenticated users to update products"
+  ON products
   FOR UPDATE
   TO authenticated
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Allow authenticated users to delete services"
-  ON services
+CREATE POLICY "Allow authenticated users to delete products"
+  ON products 
   FOR DELETE
   TO authenticated
   USING (true);
 
-CREATE POLICY "Allow public to read services"
-  ON services
+CREATE POLICY "Allow public to read products"
+  ON products
   FOR SELECT
   TO anon
   USING (true);

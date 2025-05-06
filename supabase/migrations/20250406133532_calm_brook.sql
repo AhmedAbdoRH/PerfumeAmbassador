@@ -1,21 +1,23 @@
 /*
-  # Add category foreign key to services table
+  # Add category foreign key to products table
 
   1. Changes
-    - Add category_id column to services table
-    - Add foreign key constraint to link services with categories
+    - Add category_id column to products table
+    - Add foreign key constraint to link products with categories
   
   2. Security
     - Maintain existing RLS policies
 */
 
 -- Add category_id column if it doesn't exist
-DO $$ 
+DO $$
 BEGIN 
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'services' AND column_name = 'category_id'
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'products' AND column_name = 'category_id'
   ) THEN
-    ALTER TABLE services ADD COLUMN category_id uuid REFERENCES categories(id);
+    ALTER TABLE products ADD COLUMN category_id uuid REFERENCES categories(id);
+  END IF;
+END $$;
   END IF;
 END $$;

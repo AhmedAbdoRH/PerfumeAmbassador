@@ -1,12 +1,12 @@
 /*
-  # Add orders table for payment tracking
+  # Add orders table for product purchase tracking
 
   1. New Tables
     - `orders`
       - `id` (uuid, primary key)
       - `user_id` (uuid, references auth.users)
       - `service_id` (integer, references services)
-      - `amount` (numeric)
+      - `product_id` (integer, references products)
       - `currency` (text)
       - `status` (text)
       - `payment_id` (text)
@@ -22,7 +22,7 @@
 CREATE TABLE IF NOT EXISTS orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users NOT NULL,
-  service_id integer REFERENCES services(id) NOT NULL,
+  product_id integer REFERENCES products(id) NOT NULL,
   amount numeric NOT NULL,
   currency text NOT NULL,
   status text NOT NULL DEFAULT 'pending',

@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import ServiceCard from '../components/ServiceCard';
-import type { Service, Category } from '../types/database';
+import ProductCard from '../components/ProductCard';
+import type { Category } from '../types/database';
+import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+interface Product {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  price: string;
+}
 
 export default function CategoryProducts() {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const [services, setServices] = useState<Service[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null) ;
 
   useEffect(() => {
     if (categoryId) {
@@ -22,24 +31,34 @@ export default function CategoryProducts() {
       setIsLoading(true);
       setError(null);
 
-      // Fetch category details
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('id', categoryId)
-        .single();
+      // Fetch products for this category from Firestore
+      const productsQuery = query(
+        collection(db, 'products'),
+        where('category_id', '==', `categories/${categoryId}`)
+      );
 
-      if (categoryError) throw categoryError;
+      const productsSnapshot = await getDocs(productsQuery);
+      const productsData: Product[] = productsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title,
+        description: doc.data().description || '',
+        imageUrl: doc.data().image_url || '',
+        price: doc.data().price || '',
+      }));
+      setProducts(productsData);
+
+      const categoryQuery = query(
+        collection(db, 'categories'),
+        where('id', '==', categoryId)
+      );
+      const categorySnapshot = await getDocs(categoryQuery)
+      const categoryData = categorySnapshot.docs.map((doc) => doc.data())[0] as Category
+      
+      if (!categoryData) throw Error()
       setCategory(categoryData);
 
-      // Fetch services for this category
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('category_id', categoryId);
-
-      if (servicesError) throw servicesError;
-      setServices(servicesData || []);
+      if (productsError) throw productsError;
+      setProducts(productsData || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -84,20 +103,20 @@ export default function CategoryProducts() {
             <p className="text-secondary/70 mb-8">{category.description}</p>
           )}
 
-          {services.length === 0 ? (
+          {products.length === 0 ? (
             <p className="text-center text-secondary/70 py-8">
               لا توجد منتجات في هذا القسم حالياً
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {services.map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  id={service.id}
-                  title={service.title}
-                  description={service.description || ''}
-                  imageUrl={service.image_url || ''}
-                  price={service.price || ''}
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  title={product.title}
+                  description={product.description || ''}
+                  imageUrl={product.imageUrl || ''}
+                  price={product.price || ''}
                 />
               ))}
             </div>

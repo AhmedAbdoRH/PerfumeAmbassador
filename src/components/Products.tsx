@@ -1,30 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import ServiceCard from './ServiceCard';
-import { supabase } from '../lib/supabase';
-import type { Service, Category } from '../types/database';
+import ProductCard from './ProductCard';
+import type { Product, Category } from '../types/database';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
 
-export default function Services() {
-  const [services, setServices] = useState<Service[]>([]);
+export default function Products() {
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchServices();
+    fetchProducts();
     fetchCategories();
   }, []);
 
+
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
+      const querySnapshot = await getDocs(collection(db, "categories"));
+      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
+      const error = null;
+
+
       if (error) throw error;
       setCategories(data || []);
     } catch (err: any) {
@@ -32,21 +35,18 @@ export default function Services() {
     }
   };
 
-  const fetchServices = async () => {
+  const fetchProducts = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('services')
-        .select(`
-          *,
-          category:categories(*)
-        `)
-        .order('created_at', { ascending: false });
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Product[];
+      const error = null;
 
+      
       if (error) throw error;
-      setServices(data || []);
+      setProducts(data || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -54,9 +54,9 @@ export default function Services() {
     }
   };
 
-  const filteredServices = selectedCategory
-    ? services.filter(service => service.category_id === selectedCategory)
-    : services;
+  const filteredProducts = selectedCategory
+    ? products.filter(product => product.category_id?.includes(selectedCategory))
+    : products;
 
   if (isLoading) {
     return (
@@ -122,14 +122,14 @@ export default function Services() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              id={service.id}
-              title={service.title}
-              description={service.description || ''}
-              imageUrl={service.image_url || ''}
-              price={service.price || ''}
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              id={product.id}
+              title={product.title}
+              description={product.description || ''}
+              imageUrl={product.image_url || ''}
+              price={product.price || ''}
             />
           ))}
         </div>
