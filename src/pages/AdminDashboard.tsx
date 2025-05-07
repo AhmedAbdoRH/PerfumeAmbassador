@@ -1742,5 +1742,5 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         </button>
       </footer>
     </div>
-  );
+  );   
 }

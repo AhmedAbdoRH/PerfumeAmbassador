@@ -173,7 +173,7 @@ export default function LoadingScreen({
             width: 64px; /* Expand to full size of parent */
             height: 64px; /* Expand to full size of parent */
             opacity: 0;
-          }
+          } 
         }
       `}</style>
     </div>
