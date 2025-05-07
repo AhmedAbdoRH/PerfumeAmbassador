@@ -858,47 +858,47 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           <div className="space-y-2">
             <button
               onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'products'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
+                ${activeTab === 'products'
+                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
+                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
+                `}
             >
               <Package className="h-5 w-5" />
-              <span className="text-white">إدارة المنتجات</span>
+              <span>إدارة المنتجات</span>
             </button>
             <button
               onClick={() => setActiveTab('store')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'store'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
+                ${activeTab === 'store'
+                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
+                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
+                `}
             >
               <Store className="h-5 w-5" />
-              <span className="text-white">إعدادات المتجر</span>
+              <span>إعدادات المتجر</span>
             </button>
             <button
               onClick={() => setActiveTab('banners')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'banners'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
+                ${activeTab === 'banners'
+                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
+                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
+                `}
             >
               <Image className="h-5 w-5" />
-              <span className="text-white">البانرات</span>
+              <span>البانرات</span>
             </button>
             <button
               onClick={() => setActiveTab('theme')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                activeTab === 'theme'
-                  ? 'bg-accent text-primary'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
+                ${activeTab === 'theme'
+                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
+                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
+                `}
             >
               <Palette className="h-5 w-5" />
-              <span className="text-white">تخصيص المظهر</span>
+              <span>تخصيص المظهر</span>
             </button>
           </div>
 
@@ -1470,8 +1470,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       onClick={() => setProductsSubTab('services')}
                       className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
                         productsSubTab === 'services'
-                          ? `bg-[${lightGold}] text-black shadow`
-                          : 'bg-black/20 text-gray-300 hover:bg-black/30'
+                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
+                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
                       }`}
                     >
                       المنتجات
@@ -1480,8 +1480,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       onClick={() => setProductsSubTab('categories')}
                       className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
                         productsSubTab === 'categories'
-                          ? `bg-[${lightGold}] text-black shadow`
-                          : 'bg-black/20 text-gray-300 hover:bg-black/30'
+                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
+                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
                       }`}
                     >
                       الأقسام
@@ -1492,38 +1492,26 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                   {productsSubTab === 'services' && (
                     <>
                       <form onSubmit={editingService ? handleUpdateService : handleAddService} className="mb-8 space-y-4" id="service-form">
-                        <select
-                          value={selectedCategory}
-                          onChange={(e) => setSelectedCategory(e.target.value)}
-                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-50`}
-                          required
-                          disabled={isLoading || categories.length === 0}
-                        >
-                          <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id} className="bg-gray-800 text-white">
-                              {category.name}
-                            </option>
-                          ))}
-                          {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
-                        </select>
+                        {/* عنوان المنتج */}
                         <input
                           type="text"
                           placeholder="عنوان المنتج"
                           value={newService.title}
                           onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           required
                           disabled={isLoading}
                         />
+                        {/* الوصف */}
                         <textarea
                           placeholder="وصف المنتج (اختياري)"
                           value={newService.description}
                           onChange={(e) => setNewService({ ...newService, description: e.target.value })}
                           rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
+                        {/* رفع الصورة */}
                         <div className="relative">
                           <input
                             type="file"
@@ -1535,7 +1523,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="image-upload"
-                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
                             {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
@@ -1554,18 +1542,40 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                             </div>
                           )}
                         </div>
+                        {/* اختيار القسم */}
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-70 disabled:cursor-not-allowed`}
+                          required
+                          disabled={isLoading || categories.length === 0}
+                        >
+                          <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id} className="bg-gray-800 text-white">
+                              {category.name}
+                            </option>
+                          ))}
+                          {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
+                        </select>
+                        {/* السعر */}
                         <input
                           type="text"
                           placeholder="السعر (مثال: 150 ريال أو مجاني)"
                           value={newService.price}
                           onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
+                        {/* زر الإضافة/التعديل */}
                         <div className="flex gap-3">
                           <button
                             type="submit"
-                            className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                            className={`flex-grow bg-white text-black py-2.5 px-4 rounded font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 border border-yellow-400 transition-colors flex items-center justify-center gap-2
+                        ${isLoading || (editingService ? false : !selectedCategory)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-yellow-400 hover:text-black'}
+                        `}
                             disabled={isLoading || (editingService ? false : !selectedCategory)}
                           >
                             {editingService ? (
@@ -1578,7 +1588,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                             <button
                               type="button"
                               onClick={handleCancelEdit}
-                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
+                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-70 disabled:bg-gray-500 disabled:text-white disabled:cursor-not-allowed"
                               disabled={isLoading}
                             >
                               <X size={20} /> إلغاء
@@ -1594,22 +1604,21 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         {services.map((service) => (
                           <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
                             <div className="flex justify-between items-start gap-4">
-                              <div className="flex-1 flex items-start gap-4 overflow-hidden">
-                                {service.image_url && (
-                                  <img
-                                    src={service.image_url}
-                                    alt={service.title}
-                                    className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
-                                  />
-                                )}
-                                <div className="flex-1 overflow-hidden">
-                                  <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
-                                    {service.category?.name || 'قسم غير محدد'}
-                                  </div>
-                                  <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
-                                  {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
-                                  {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
+                              {/* صورة المنتج أولاً */}
+                              {service.image_url && (
+                                <img
+                                  src={service.image_url}
+                                  alt={service.title}
+                                  className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
+                                />
+                              )}
+                              <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
+                                  {service.category?.name || 'قسم غير محدد'}
                                 </div>
+                                <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
+                                {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
+                                {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
                               </div>
                               <div className="flex gap-3 flex-shrink-0">
                                 <button
@@ -1723,6 +1732,15 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           </div>
         </div>
       </div>
+      {/* فوتر وزر العودة للصفحة الرئيسية بلون أبيض شفاف */}
+      <footer className="w-full flex justify-center py-8 mt-10">
+        <button
+          onClick={() => navigate('/')}
+          className="bg-white/70 hover:bg-white text-black font-bold px-8 py-3 rounded-full shadow-lg transition-colors border-2 border-yellow-600"
+        >
+          العودة للصفحة الرئيسية
+        </button>
+      </footer>
     </div>
   );
 }

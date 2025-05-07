@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-// --- التوقيت المعدل ---
-const FADE_START_DELAY = 1500; // مللي ثانية - بدء التلاشي للخارج مبكرًا
-const HIDE_DELAY = 3000;       // مللي ثانية - المدة الإجمالية للظهور هي 3 ثوانٍ
-const FADE_OUT_DURATION_MS = HIDE_DELAY - FADE_START_DELAY; // مدة التلاشي للخارج (الآن 1500 مللي ثانية = 1.5 ثانية)
-
 export default function LoadingScreen({
-  logoUrl = '/logo.png',
+  logoUrl,
   onFinish,
 }: {
   logoUrl?: string;
@@ -14,35 +9,47 @@ export default function LoadingScreen({
 }) {
   const [show, setShow] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
-  // --- حالة جديدة لتحميل الصورة ---
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  // Effect للمؤقتات وتحميل الصورة المسبق
+  // Constants for timing
+  const FADE_START_DELAY = 1500; // ms, time until fade-out starts
+  const HIDE_DELAY = 3000; // ms, time until component is hidden
+  const FADE_OUT_DURATION_MS = HIDE_DELAY - FADE_START_DELAY; // Duration of the fade-out effect
+
   useEffect(() => {
-    let isMounted = true; // علم لمنع تحديثات الحالة على مكون غير مُركّب
+    let isMounted = true;
 
-    // --- منطق تحميل الصورة المسبق ---
-    const img = new Image();
-    img.onload = () => {
+    // Only attempt to load image if logoUrl is provided
+    if (logoUrl) {
+      const img = new Image();
+      img.onload = () => {
+        if (isMounted) {
+          setImageLoaded(true);
+          setImageError(false);
+        }
+      };
+      img.onerror = () => {
+        if (isMounted) {
+          setImageError(true);
+          setImageLoaded(true); // Still mark as loaded to continue animation flow
+        }
+      };
+      img.src = logoUrl;
+    } else {
+      // If no logo URL provided, show the fallback (custom loader) immediately
       if (isMounted) {
-        setImageLoaded(true); // تعيين الحالة عند تحميل الصورة
+        setImageError(true);
+        setImageLoaded(true);
       }
-    };
-    img.onerror = () => {
-      // اختياري: معالجة خطأ تحميل الصورة، ربما عرض أيقونة افتراضية أو إخفاء أسرع
-      console.error("فشل تحميل شعار شاشة التحميل:", logoUrl);
-      if (isMounted) {
-        // قرر كيفية التعامل مع الخطأ: ربما المتابعة بدون شعار، أو استخدام بديل
-         setImageLoaded(true); // أو تعيين حالة أخرى لإظهار خطأ/بديل
-      }
-    };
-    img.src = logoUrl; // بدء تحميل الصورة
+    }
 
-    // --- المؤقتات ---
+    // Timer to start the fade-out of the entire screen
     const timer1 = setTimeout(() => {
-        if (isMounted) setFadeOut(true);
+      if (isMounted) setFadeOut(true);
     }, FADE_START_DELAY);
 
+    // Timer to hide the component completely and call onFinish
     const timer2 = setTimeout(() => {
       if (isMounted) {
         setShow(false);
@@ -50,41 +57,49 @@ export default function LoadingScreen({
       }
     }, HIDE_DELAY);
 
-    // دالة التنظيف
+    // Cleanup function to clear timers if the component unmounts
     return () => {
-      isMounted = false; // وضع علامة على أنه غير مُركّب
+      isMounted = false;
       clearTimeout(timer1);
       clearTimeout(timer2);
-      // اختياري: مسح معالجات الصور إذا لزم الأمر
-      img.onload = null;
-      img.onerror = null;
     };
-  }, [logoUrl, onFinish]); // إضافة logoUrl إلى مصفوفة الاعتماديات
+  }, [logoUrl, onFinish]); // Dependencies for the useEffect hook
 
-  // لا تعرض أي شيء إذا كانت show خاطئة
+  // If show is false, render nothing
   if (!show) return null;
 
   return (
     <div
-      // الحاوية الرئيسية: تعالج الخلفية والتلاشي الكلي للخارج
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#232526] to-[#414345] transition-opacity ease-in-out ${ // التأكد من استخدام easing سلس
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#232526] to-[#414345] transition-opacity ease-in-out ${
         fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
-      style={{ transitionDuration: `${FADE_OUT_DURATION_MS}ms` }} // استخدام المدة الأبطأ المحسوبة
+      style={{ transitionDuration: `${FADE_OUT_DURATION_MS}ms` }}
     >
-      {/* --- عرض الصورة بشكل شرطي فقط عند تحميلها --- */}
+      {/* Only render logo or custom loader once image loading status is determined */}
       {imageLoaded && (
-        <img
-          src={logoUrl}
-          alt="Loading Logo"
-          // تطبيق الرسوم المتحركة مباشرة الآن بعد أن علمنا أن الصورة قد تم تحميلها
-          className="w-32 h-32 sm:w-40 sm:h-40 object-contain logo-animate"
-          // لا حاجة لحيل الشفافية المضمنة بعد الآن
-        />
+        <>
+          {imageError ? (
+            // Fallback: Custom loader when image fails or no URL provided
+            <div className="custom-loader-entry-animation"> {/* Container for entry animation */}
+              <div className="custom-loader">
+                <div></div>
+                <div></div>
+              </div>
+            </div>
+          ) : (
+            // Show actual logo if it loaded successfully
+            <img
+              src={logoUrl}
+              alt="Loading Logo"
+              className="w-32 h-32 sm:w-40 sm:h-40 object-contain logo-animation"
+            />
+          )}
+        </>
       )}
 
-      {/* --- الأنماط (تبقى keyframes كما هي) --- */}
+      {/* CSS animations are defined here */}
       <style>{`
+        /* Keyframe for initial appearance: fade in and scale up */
         @keyframes fade-in-scale-up {
           0% {
             opacity: 0;
@@ -96,23 +111,69 @@ export default function LoadingScreen({
           }
         }
 
+        /* Keyframe for logo pulsing glow effect */
         @keyframes pulse-glow {
           0%, 100% {
-            transform: scale(1);
+            transform: scale(1); /* Maintain scale from fade-in-scale-up */
             filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.4));
           }
           50% {
-            transform: scale(1.04);
+            transform: scale(1.04); /* Pulse effect */
             filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7));
           }
         }
 
-        /* فئة الرسوم المتحركة المطبقة على وسم img بمجرد عرضه */
-        .logo-animate {
+        /* Animation class for the logo image */
+        .logo-animation {
           animation:
-            fade-in-scale-up 0.8s cubic-bezier(.4,0,.2,1) forwards, /* رسوم الدخول */
-            pulse-glow 2.5s infinite ease-in-out 0.8s; /* النبض المستمر، يبدأ بعد الدخول */
-          will-change: transform, opacity, filter;
+            fade-in-scale-up 0.8s cubic-bezier(.4,0,.2,1) forwards,
+            pulse-glow 2.5s infinite ease-in-out 0.8s; /* pulse-glow starts after fade-in */
+          will-change: transform, opacity, filter; /* Optimize animations */
+        }
+
+        /* Animation class for the custom loader's entry */
+        .custom-loader-entry-animation {
+          animation: fade-in-scale-up 0.8s cubic-bezier(.4,0,.2,1) forwards;
+          will-change: transform, opacity; /* Optimize animations */
+          display: flex; /* For centering the loader itself */
+          justify-content: center;
+          align-items: center;
+        }
+        
+        /* Custom loader styles */
+        .custom-loader {
+          position: relative;
+          width: 64px;
+          height: 64px;
+        }
+
+        .custom-loader div {
+          box-sizing: border-box; /* Ensure border doesn't add to size */
+          position: absolute;
+          border: 4px solid #FFFFFF; /* Loader color set to white */
+          border-radius: 50%;
+          animation: loader8435 1s ease-out infinite;
+        }
+
+        .custom-loader div:nth-child(2) {
+          animation-delay: -0.5s; /* Second circle starts later */
+        }
+
+        @keyframes loader8435 {
+          0% {
+            top: 32px; /* Center within 64px parent */
+            left: 32px; /* Center within 64px parent */
+            width: 0;
+            height: 0;
+            opacity: 1;
+          }
+          100% {
+            top: 0px;
+            left: 0px;
+            width: 64px; /* Expand to full size of parent */
+            height: 64px; /* Expand to full size of parent */
+            opacity: 0;
+          }
         }
       `}</style>
     </div>
