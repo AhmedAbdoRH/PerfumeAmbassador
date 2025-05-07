@@ -30,6 +30,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
   const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('products');
   const [productsSubTab, setProductsSubTab] = useState<'services' | 'categories'>('services');
+  const [bannersSubTab, setBannersSubTab] = useState<'text' | 'image'>('text');
 
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [newService, setNewService] = useState({
@@ -249,13 +250,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       if (error) throw error;
       setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
       applyThemeSettings(dbTheme);
-      // تحديث بيانات storeSettings محلياً حتى تظهر التغييرات مباشرة
-      setStoreSettings(prev => ({
-        ...prev,
-        theme_settings: dbTheme
-      }));
-      // إعلام التطبيق الرئيسي لإعادة تحميل الإعدادات
-      if (onSettingsUpdate) onSettingsUpdate();
     } catch (err: any) {
       setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
     } finally {
@@ -911,6 +905,58 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
           {/* Main Content */}
           <div className="md:col-span-3">
+            {/* --- Tab Header for all tabs --- */}
+            {(activeTab === 'banners' || activeTab === 'products' || activeTab === 'store' || activeTab === 'theme') && (
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-8 py-6 bg-gradient-to-r from-yellow-400/20 via-yellow-100/10 to-yellow-400/10 border-b border-yellow-400/20 mb-8 rounded-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
+                    {activeTab === 'banners' && <Image className="w-7 h-7 text-yellow-400" />}
+                    {activeTab === 'products' && <Package className="w-7 h-7 text-yellow-400" />}
+                    {activeTab === 'store' && <Store className="w-7 h-7 text-yellow-400" />}
+                    {activeTab === 'theme' && <Palette className="w-7 h-7 text-yellow-400" />}
+                    {activeTab === 'banners' && 'إدارة البانرات'}
+                    {activeTab === 'products' && 'إدارة المنتجات'}
+                    {activeTab === 'store' && 'إعدادات المتجر'}
+                    {activeTab === 'theme' && 'تخصيص المظهر'}
+                  </h2>
+                  {activeTab === 'banners' && (
+                    <p className="text-gray-200 mt-1 text-sm">يمكنك إضافة بانر نصي أو صورة وتفعيل واحد فقط في نفس الوقت</p>
+                  )}
+                  {activeTab === 'products' && (
+                    <p className="text-gray-200 mt-1 text-sm">إدارة المنتجات والأقسام المرتبطة بها</p>
+                  )}
+                  {activeTab === 'store' && (
+                    <p className="text-gray-200 mt-1 text-sm">تعديل إعدادات المتجر والمعلومات العامة</p>
+                  )}
+                  {activeTab === 'theme' && (
+                    <p className="text-gray-200 mt-1 text-sm">تخصيص ألوان وخطوط وخلفية الموقع</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  {activeTab === 'banners' && (
+                    <>
+                      <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
+                        <Image className="w-4 h-4" /> {banners.length} بانر
+                      </span>
+                      <span className="inline-flex items-center gap-1 bg-green-400/20 text-green-300 px-3 py-1 rounded-full text-xs font-bold">
+                        {banners.filter(b => b.is_active).length} مفعل
+                      </span>
+                    </>
+                  )}
+                  {activeTab === 'products' && (
+                    <>
+                      <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
+                        <Package className="w-4 h-4" /> {services.length} منتج
+                      </span>
+                      <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold">
+                        <List className="w-4 h-4" /> {categories.length} قسم
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'theme' && (
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
                 <h2 className="text-xl font-bold mb-6 text-white">تخصيص المظهر</h2>
@@ -1295,61 +1341,65 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
               </div>
             )}
 
+            {/* --- Banners Tab --- */}
             {activeTab === 'banners' && (
               <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
-                <div className="p-6 border-t border-white/10">
-                  <form onSubmit={editingBanner ? handleUpdateBanner : handleAddBanner} className="mb-8 space-y-4">
-                    <div className="flex gap-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="text"
-                          checked={newBanner.type === 'text'}
-                          onChange={(e) => setNewBanner({ ...newBanner, type: e.target.value as 'text' | 'image' })}
-                          className="ml-2"
-                        />
-                        نص
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="image"
-                          checked={newBanner.type === 'image'}
-                          onChange={(e) => setNewBanner({ ...newBanner, type: e.target.value as 'text' | 'image' })}
-                          className="ml-2"
-                        />
-                        صورة
-                      </label>
-                    </div>
-
-                    {newBanner.type === 'text' && (
+                <div className="p-8">
+                  {/* Sub Tabs for banners */}
+                  <div className="flex mb-8 gap-2">
+                    <button
+                      onClick={() => setBannersSubTab('text')}
+                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
+                        bannersSubTab === 'text'
+                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
+                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                      }`}
+                    >
+                      بانرات نصية
+                    </button>
+                    <button
+                      onClick={() => setBannersSubTab('image')}
+                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
+                        bannersSubTab === 'image'
+                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
+                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                      }`}
+                    >
+                      بانرات صور
+                    </button>
+                  </div>
+                  {/* Banner Form */}
+                  <form onSubmit={editingBanner ? handleUpdateBanner : handleAddBanner} className="mb-10 space-y-4">
+                    {/* نوع البانر يتم التحكم فيه من التاب الفرعي */}
+                    <input type="hidden" value={bannersSubTab} />
+                    {/* اجعل نوع البانر حسب التاب الفرعي */}
+                    {bannersSubTab === 'text' && (
                       <>
                         <input
                           type="text"
                           placeholder="عنوان البانر"
-                          value={newBanner.title}
-                          onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
+                          value={newBanner.type === 'text' ? newBanner.title : ''}
+                          onChange={(e) => setNewBanner({ ...newBanner, type: 'text', title: e.target.value })}
                           className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           required
                           disabled={isLoading}
                         />
                         <textarea
                           placeholder="وصف البانر"
-                          value={newBanner.description}
-                          onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })}
+                          value={newBanner.type === 'text' ? newBanner.description : ''}
+                          onChange={(e) => setNewBanner({ ...newBanner, type: 'text', description: e.target.value })}
                           rows={3}
                           className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           disabled={isLoading}
                         />
                       </>
                     )}
-
-                    {newBanner.type === 'image' && (
+                    {bannersSubTab === 'image' && (
                       <div className="relative">
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'banner')}
+                          onChange={(e) => { setNewBanner({ ...newBanner, type: 'image' }); handleImageUpload(e, 'banner'); }}
                           className="hidden"
                           id="banner-image-upload"
                           disabled={uploadingBannerImage || isLoading}
@@ -1361,7 +1411,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingBannerImage ? 'animate-pulse' : ''}`} />
                           {uploadingBannerImage ? 'جاري رفع الصورة...' : (newBanner.image_url ? 'تغيير الصورة' : 'اختر صورة للبانر')}
                         </label>
-                        {newBanner.image_url && !uploadingBannerImage && (
+                        {newBanner.type === 'image' && newBanner.image_url && !uploadingBannerImage && (
                           <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
                             <img
                               src={newBanner.image_url}
@@ -1376,7 +1426,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         )}
                       </div>
                     )}
-
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -1386,7 +1435,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       />
                       تفعيل هذا البانر
                     </label>
-
                     <div className="flex gap-3">
                       <button
                         type="submit"
@@ -1411,54 +1459,85 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       )}
                     </div>
                   </form>
-
-                  <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">البانرات الحالية</h3>
-                  <div className="space-y-3">
-                    {!isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد بانرات لعرضها.</p>}
-                    {isLoading && banners.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل البانرات...</p>}
-                    {banners.map((banner) => (
-                      <div key={banner.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingBanner === banner.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 overflow-hidden">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`px-2 py-0.5 rounded text-xs ${banner.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>
-                                {banner.is_active ? 'مفعل' : 'غير مفعل'}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-300`}>
-                                {banner.type === 'text' ? 'نصي' : 'صورة'}
-                              </span>
-                            </div>
-                            {banner.type === 'image' && banner.image_url && (
+                  {/* Banner List */}
+                  <h3 className="text-lg font-semibold mb-6 text-white border-b border-gray-700 pb-2 flex items-center gap-2">
+                    <List className="w-5 h-5 text-yellow-400" />
+                    البانرات الحالية
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                    {!isLoading && banners.filter(b => b.type === bannersSubTab).length === 0 && (
+                      <div className="col-span-full text-gray-400 text-center mt-4">لا توجد بانرات لعرضها.</div>
+                    )}
+                    {isLoading && banners.filter(b => b.type === bannersSubTab).length === 0 && (
+                      <div className="col-span-full text-gray-400 text-center mt-4">جاري تحميل البانرات...</div>
+                    )}
+                    {banners.filter(b => b.type === bannersSubTab).map((banner) => (
+                      <div
+                        key={banner.id}
+                        className={`
+                          relative group border border-gray-700/50 rounded-xl bg-gradient-to-br from-gray-800/60 to-gray-900/40 shadow-lg transition-all duration-300 overflow-hidden
+                          ${editingBanner === banner.id ? `ring-2 ring-[${lightGold}] shadow-[0_0_16px_2px_${lightGold}33]` : 'hover:border-yellow-400/60 hover:shadow-yellow-400/10'}
+                        `}
+                      >
+                        {/* Banner type & status */}
+                        <div className="absolute top-3 right-3 flex gap-2 z-10">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${banner.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>
+                            {banner.is_active ? 'مفعل' : 'غير مفعل'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300`}>
+                            {banner.type === 'text' ? 'نصي' : 'صورة'}
+                          </span>
+                        </div>
+                        {/* Banner content */}
+                        <div className="p-0 flex flex-col h-full">
+                          {/* Banner image or icon */}
+                          <div className="relative w-full h-40 flex items-center justify-center bg-gradient-to-tr from-yellow-100/10 to-black/10 rounded-t-xl overflow-hidden">
+                            {banner.type === 'image' && banner.image_url ? (
                               <img
                                 src={banner.image_url}
                                 alt={banner.title || 'صورة البانر'}
-                                className="w-full h-32 object-cover rounded mb-2"
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center w-full h-full">
+                                <Image className="w-12 h-12 text-yellow-400 opacity-60 mb-2" />
+                                <span className="text-yellow-200 text-lg font-bold">{banner.title || 'بانر نصي'}</span>
+                              </div>
                             )}
-                            <h4 className="font-bold text-white text-lg truncate" title={banner.title || ''}>
-                              {banner.title || 'بدون عنوان'}
-                            </h4>
-                            {banner.description && (
-                              <p className="text-gray-400 text-sm mt-1 line-clamp-2">{banner.description}</p>
+                            {banner.is_active && (
+                              <span className="absolute top-2 left-2 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded-full shadow font-bold z-10">
+                                مفعل
+                              </span>
                             )}
                           </div>
-                          <div className="flex gap-3 flex-shrink-0">
-                            <button
-                              onClick={() => !isLoading && handleEditBanner(banner)}
-                              title="تعديل البانر"
-                              className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-                              disabled={editingBanner === banner.id || isLoading}
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => !isLoading && handleDeleteBanner(banner.id)}
-                              title="حذف البانر"
-                              className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isLoading}
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                          {/* Banner text content */}
+                          <div className="flex-1 flex flex-col justify-between p-5">
+                            <div>
+                              <h4 className="font-bold text-white text-lg truncate" title={banner.title || ''}>
+                                {banner.title || 'بدون عنوان'}
+                              </h4>
+                              {banner.description && (
+                                <p className="text-gray-300 text-sm mt-1 line-clamp-2">{banner.description}</p>
+                              )}
+                            </div>
+                            <div className="flex justify-end gap-2 mt-4">
+                              <button
+                                onClick={() => !isLoading && handleEditBanner(banner)}
+                                title="تعديل البانر"
+                                className={`text-blue-400 hover:text-blue-300 transition-colors p-1 rounded-full border border-blue-400/30 bg-blue-900/10 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                disabled={editingBanner === banner.id || isLoading}
+                              >
+                                <Edit size={18} />
+                              </button>
+                              <button
+                                onClick={() => !isLoading && handleDeleteBanner(banner.id)}
+                                title="حذف البانر"
+                                className="text-red-500 hover:text-red-400 transition-colors p-1 rounded-full border border-red-400/30 bg-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isLoading}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1749,5 +1828,5 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         </button>
       </footer>
     </div>
-  );   
+  );
 }

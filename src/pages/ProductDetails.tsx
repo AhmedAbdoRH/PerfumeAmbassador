@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -10,12 +11,19 @@ export default function ProductDetails() {
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState<Service[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchService(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (service?.category_id && service?.id) {
+      fetchSuggested(service.category_id, service.id);
+    }
+  }, [service]);
 
   const fetchService = async (serviceId: string) => {
     try {
@@ -39,6 +47,17 @@ export default function ProductDetails() {
     }
   };
 
+  const fetchSuggested = async (categoryId: string, excludeId: string | number) => {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('category_id', categoryId)
+      .neq('id', excludeId)
+      .limit(4);
+    if (!error && data) setSuggested(data);
+    else setSuggested([]);
+  };
+
   const handleContact = () => {
     if (!service) return;
     const productUrl = window.location.href;
@@ -47,7 +66,6 @@ export default function ProductDetails() {
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // Extracted background styles for reuse
   const backgroundStyles = {
     background: 'var(--background-gradient, var(--background-color, #232526))',
     backgroundSize: 'cover',
@@ -56,7 +74,6 @@ export default function ProductDetails() {
   };
 
   if (isLoading) {
-    // Added pt-24 here as well for consistency with the main view
     return (
       <div
         className="min-h-screen flex items-center justify-center pt-24"
@@ -68,7 +85,6 @@ export default function ProductDetails() {
   }
 
   if (error || !service) {
-    // Added pt-24 here as well for consistency with the main view
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center gap-4 pt-24"
@@ -86,19 +102,12 @@ export default function ProductDetails() {
   }
 
   return (
-    // Outer div uses flex-col and now has top padding to clear the navbar
-    // Added pt-24 here
     <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
-
-      {/* This div centers the product card and grows */}
-      {/* py-8 adds padding around the centered product card */}
       <div className="flex items-center justify-center flex-grow py-8">
-        {/* Increased max-width for the product card container */}
         <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
           <div className="rounded-lg shadow-lg overflow-hidden glass">
             <div className="md:flex">
               <div className="md:w-1/2">
-                {/* Consider making image height more responsive if needed */}
                 <img
                   src={service.image_url || ''}
                   alt={service.title}
@@ -108,7 +117,7 @@ export default function ProductDetails() {
               <div className="md:w-1/2 p-8">
                 <div className="mb-4">
                   <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm">
-                    {/* إذا أردت اسم القسم، يمكنك جلبه باستعلام منفصل */}
+                    {/* يمكن جلب اسم القسم باستعلام منفصل إذا رغبت */}
                   </span>
                 </div>
                 <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
@@ -135,23 +144,33 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* This div contains the "Back to Home" button and is placed below the centered content */}
+      {/* منتجات مقترحة من نفس القسم */}
+      {suggested.length > 0 && (
+        <div className="container mx-auto px-4 max-w-5xl mb-8">
+          <h2 className="text-2xl font-bold mb-6 text-accent text-center">منتجات مقترحة من نفس القسم</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {suggested.map((item) => (
+              <ProductCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.description || ''}
+                imageUrl={item.image_url || ''}
+                price={item.price || ''}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-center pb-8">
         <button
           onClick={() => navigate('/')}
-          className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent" // Added border for better visibility
+          className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent"
         >
           ← العودة للرئيسية
         </button>
       </div>
-
-      {/* Footer is removed */}
-      {/*
-      <footer className="bg-secondary text-primary text-center py-4">
-        جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
-      </footer>
-      */}
-
     </div>
   );
 }
