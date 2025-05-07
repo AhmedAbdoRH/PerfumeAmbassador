@@ -11,6 +11,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceDetails from './pages/ServiceDetails';
 import CategoryProducts from './pages/CategoryProducts';
+import ProductDetails from './pages/ProductDetails';
 import LoadingScreen from './components/LoadingScreen';
 import type { StoreSettings } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
@@ -118,11 +119,12 @@ function App() {
     <div
       className="min-h-screen font-cairo"
       style={{
+        // Always use the same logic as the homepage for background
         background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
           ? (storeSettings as any).theme_settings.backgroundGradient
           : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
             ? (storeSettings as any).theme_settings.backgroundColor
-            : undefined, // Let CSS handle default if neither is set
+            : "linear-gradient(135deg, #232526 0%, #414345 100%)", // fallback to homepage gradient
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
@@ -180,8 +182,7 @@ function App() {
       >
         <Router>
           <Routes>
-            {/* Admin Routes (consider if you want these to fade in too or appear instantly) */}
-            {/* Currently included in the faded wrapper */}
+            {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={
               <PrivateRoute>
@@ -190,10 +191,14 @@ function App() {
             } />
 
             {/* Public Routes using the Layout component */}
-            {/* These are also inside the faded wrapper */}
             <Route path="/service/:id" element={
               <Layout>
                 <ServiceDetails />
+              </Layout>
+            } />
+            <Route path="/product/:id" element={
+              <Layout>
+                <ProductDetails />
               </Layout>
             } />
             <Route path="/category/:categoryId" element={

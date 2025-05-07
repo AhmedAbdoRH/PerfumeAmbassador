@@ -2,44 +2,45 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Sparkles } from 'lucide-react';
 
-interface ServiceCardProps {
+interface ProductCardProps {
   title: string;
   description: string;
   imageUrl: string;
   price: string;
-  id: number;
+  id: string | number;
 }
 
 // Define the light gold color using the hex code from the Hero component
 const lightGold = '#FFD700'; // This is standard gold color
 
-export default function ServiceCard({ title, description, imageUrl, price, id }: ServiceCardProps) {
+export default function ProductCard({ title, description, imageUrl, price, id }: ProductCardProps) {
   /**
    * Handles the click event for the "Contact Now" button.
    * Prevents the default link behavior and opens a WhatsApp chat
-   * with a pre-filled message including service details.
+   * with a pre-filled message including product details.
    * @param e - The mouse event.
    */
   const handleContactClick = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent the default link behavior
-    // Construct the URL for the specific service page
-    const serviceUrl = `${window.location.origin}/service/${id}`;
+    // Construct the URL for the specific product page
+    const productUrl = `${window.location.origin}/product/${id}`;;
     // Create the pre-filled message for WhatsApp
-    const message = `استفسار عن : ${title}\n: ${serviceUrl}`;
+    const message = `استفسار عن المنتج: ${title}
+رابط المنتج: ${productUrl}`;
     // Open the WhatsApp chat link in a new tab
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
-    // Main container for the service card.
+    // Main container for the product card.
     // Uses secondary color with transparency for background and border.
     // Applies backdrop blur for a glassmorphism effect.
     // Includes transition for hover effects (scale and background change).
     <div className="group relative bg-secondary/5 backdrop-blur-md rounded-xl border border-secondary/20 overflow-hidden transition-all duration-300 hover:scale-105 hover:bg-secondary/10">
-      {/* Link wraps the card content, navigating to the service details page */}
-      <Link to={`/service/${id}`}>
+      {/* Link wraps the card content, navigating to the product details page */}
+      <Link to={`/product/${id}`}>
         <div className="relative">
-          {/* Service image */}
+          {/* Product image */}
           <img src={imageUrl} alt={title} className="w-full h-48 object-cover" />
           {/* Overlay gradient for hover effect */}
           {/* Starts from primary color with 80% opacity at the bottom */}
@@ -49,20 +50,20 @@ export default function ServiceCard({ title, description, imageUrl, price, id }:
         </div>
         {/* Card content area */}
         <div className="p-6">
-          {/* Service title with Sparkles icon */}
+          {/* Product title with Sparkles icon */}
           {/* Sparkles icon color is set using the light gold hex code */}
           <h3 className="text-xl font-bold mb-2 text-secondary flex items-center gap-2">
             {title}
             {/* Apply light gold text color using arbitrary value syntax */}
             <Sparkles className={`h-4 w-4 text-[${lightGold}]`} />
           </h3>
-          {/* Service description */}
+          {/* Product description */}
           {/* Text color is secondary with 70% opacity */}
           {/* line-clamp-2 limits the description to two lines */}
           <p className="text-secondary/70 mb-4 line-clamp-2">{description}</p>
           {/* Price and Contact button container */}
           <div className="flex justify-between items-center">
-            {/* Service price */}
+            {/* Product price */}
             {/* Price text color is set using the light gold hex code */}
             {/* Apply light gold text color using arbitrary value syntax */}
             <span className={`font-bold text-lg text-[${lightGold}]`}>{price}</span>

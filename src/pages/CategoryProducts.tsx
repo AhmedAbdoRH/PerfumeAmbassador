@@ -49,7 +49,15 @@ export default function CategoryProducts() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary pt-24 flex items-center justify-center">
+      <div
+        className="min-h-screen pt-24 flex items-center justify-center"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-xl text-secondary">جاري التحميل...</div>
       </div>
     );
@@ -57,7 +65,15 @@ export default function CategoryProducts() {
 
   if (error || !category) {
     return (
-      <div className="min-h-screen bg-primary pt-24 flex flex-col items-center justify-center gap-4">
+      <div
+        className="min-h-screen pt-24 flex flex-col items-center justify-center gap-4"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-xl text-secondary">{error || 'القسم غير موجود'}</div>
         <Link
           to="/"
@@ -70,7 +86,15 @@ export default function CategoryProducts() {
   }
 
   return (
-    <div className="min-h-screen bg-primary pt-24">
+    <div
+      className="min-h-screen pt-24"
+      style={{
+        background: 'var(--background-gradient, var(--background-color, #232526))',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <Link to="/" className="text-secondary hover:text-accent transition-colors">

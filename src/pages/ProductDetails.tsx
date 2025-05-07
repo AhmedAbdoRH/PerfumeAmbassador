@@ -1,40 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Product } from '../types/database';
+import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
-      fetchProduct(parseInt(id, 10));
+      fetchService(id);
     }
   }, [id]);
 
-  const fetchProduct = async (productId: number) => {
+  const fetchService = async (serviceId: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          category:categories(*)
-        `)
-        .eq('id', productId)
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
         .single();
 
       if (fetchError) throw fetchError;
       if (!data) throw new Error('المنتج غير موجود');
 
-      setProduct(data);
+      setService(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -43,24 +40,40 @@ export default function ProductDetails() {
   };
 
   const handleContact = () => {
-    if (!product) return;
+    if (!service) return;
     const productUrl = window.location.href;
-    const message = `استفسار عن المنتج: ${product.title}
+    const message = `استفسار عن المنتج: ${service.title}
 رابط المنتج: ${productUrl}`;
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-xl text-secondary">جاري التحميل...</div>
       </div>
     );
   }
 
-  if (error || !product) {
+  if (error || !service) {
     return (
-      <div className="min-h-screen bg-primary flex flex-col items-center justify-center gap-4">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-xl text-secondary">{error || 'المنتج غير موجود'}</div>
         <button
           onClick={() => navigate('/')}
@@ -73,7 +86,15 @@ export default function ProductDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-primary">
+    <div
+      className="min-h-screen"
+      style={{
+        background: 'var(--background-gradient, var(--background-color, #232526))',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="container mx-auto px-4 py-8">
         <button
           onClick={() => navigate('/')}
@@ -86,24 +107,24 @@ export default function ProductDetails() {
           <div className="md:flex">
             <div className="md:w-1/2">
               <img
-                src={product.image_url || ''}
-                alt={product.title}
+                src={service.image_url || ''}
+                alt={service.title}
                 className="w-full h-[400px] object-cover"
               />
             </div>
             <div className="md:w-1/2 p-8">
               <div className="mb-4">
                 <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm">
-                  {product.category?.name}
+                  {/* إذا أردت اسم القسم، يمكنك جلبه باستعلام منفصل */}
                 </span>
               </div>
-              <h1 className="text-3xl font-bold mb-4 text-secondary">{product.title}</h1>
+              <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
               <p className="text-gray-400 mb-6 text-lg leading-relaxed">
-                {product.description}
+                {service.description}
               </p>
               <div className="border-t border-gray-700 pt-6 mb-6">
                 <div className="text-2xl font-bold text-accent mb-6">
-                  {product.price}
+                  {service.price}
                 </div>
                 <div className="flex gap-4">
                   <button
@@ -119,9 +140,6 @@ export default function ProductDetails() {
           </div>
         </div>
       </div>
-      <footer className="bg-secondary text-primary text-center py-4 mt-8">
-        جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
-      </footer>
     </div>
   );
 }

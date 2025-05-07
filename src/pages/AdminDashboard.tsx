@@ -249,6 +249,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       if (error) throw error;
       setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
       applyThemeSettings(dbTheme);
+      // تحديث بيانات storeSettings محلياً حتى تظهر التغييرات مباشرة
+      setStoreSettings(prev => ({
+        ...prev,
+        theme_settings: dbTheme
+      }));
+      // إعلام التطبيق الرئيسي لإعادة تحميل الإعدادات
+      if (onSettingsUpdate) onSettingsUpdate();
     } catch (err: any) {
       setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
     } finally {

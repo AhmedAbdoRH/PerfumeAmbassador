@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
 
-export default function ServiceDetails() {
+export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [service, setService] = useState<Service | null>(null);
@@ -13,26 +13,23 @@ export default function ServiceDetails() {
 
   useEffect(() => {
     if (id) {
-      fetchService(parseInt(id, 10));
+      fetchService(id);
     }
   }, [id]);
 
-  const fetchService = async (serviceId: number) => {
+  const fetchService = async (serviceId: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
       const { data, error: fetchError } = await supabase
         .from('services')
-        .select(`
-          *,
-          category:categories(*)
-        `)
+        .select('*')
         .eq('id', serviceId)
         .single();
 
       if (fetchError) throw fetchError;
-      if (!data) throw new Error('الخدمة غير موجودة');
+      if (!data) throw new Error('المنتج غير موجود');
 
       setService(data);
     } catch (err: any) {
@@ -44,14 +41,23 @@ export default function ServiceDetails() {
 
   const handleContact = () => {
     if (!service) return;
-    const serviceUrl = window.location.href;
-    const message = `استفسار عن : ${service.title}\nرابط المنتج: ${serviceUrl}`;
+    const productUrl = window.location.href;
+    const message = `استفسار عن المنتج: ${service.title}
+رابط المنتج: ${productUrl}`;
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-xl text-secondary">جاري التحميل...</div>
       </div>
     );
@@ -59,8 +65,16 @@ export default function ServiceDetails() {
 
   if (error || !service) {
     return (
-      <div className="min-h-screen bg-primary flex flex-col items-center justify-center gap-4">
-        <div className="text-xl text-secondary">{error || 'الخدمة غير موجودة'}</div> {/* تم تغيير لون نص الخطأ إلى الأبيض */}
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{
+          background: 'var(--background-gradient, var(--background-color, #232526))',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }}
+      >
+        <div className="text-xl text-secondary">{error || 'المنتج غير موجود'}</div>
         <button
           onClick={() => navigate('/')}
           className="bg-secondary text-primary px-6 py-2 rounded-lg hover:bg-opacity-90"
@@ -72,7 +86,15 @@ export default function ServiceDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-primary">
+    <div
+      className="min-h-screen"
+      style={{
+        background: 'var(--background-gradient, var(--background-color, #232526))',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="container mx-auto px-4 py-8">
         <button
           onClick={() => navigate('/')}
@@ -81,7 +103,7 @@ export default function ServiceDetails() {
           ← العودة للرئيسية
         </button>
 
-        <div className="rounded-lg shadow-lg overflow-hidden glass"> {/* تطبيق كلاس الجلاس مورفيزم هنا */}
+        <div className="rounded-lg shadow-lg overflow-hidden glass">
           <div className="md:flex">
             <div className="md:w-1/2">
               <img
@@ -93,7 +115,7 @@ export default function ServiceDetails() {
             <div className="md:w-1/2 p-8">
               <div className="mb-4">
                 <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm">
-                  {service.category?.name}
+                  {/* إذا أردت اسم القسم، يمكنك جلبه باستعلام منفصل */}
                 </span>
               </div>
               <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
@@ -119,7 +141,6 @@ export default function ServiceDetails() {
         </div>
       </div>
       <footer className="bg-secondary text-primary text-center py-4 mt-8">
-        جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );

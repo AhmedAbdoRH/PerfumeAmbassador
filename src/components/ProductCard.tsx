@@ -7,7 +7,7 @@ interface ProductCardProps {
   description: string;
   imageUrl: string;
   price: string;
-  id: number;
+  id: string | number;
 }
 
 // Define the light gold color using the hex code from the Hero component
