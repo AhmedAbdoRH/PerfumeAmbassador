@@ -39,13 +39,14 @@ export default function ProductCard({ title, description, imageUrl, price, id }:
     <div className="group relative bg-secondary/5 backdrop-blur-md rounded-xl border border-secondary/20 overflow-hidden transition-all duration-300 hover:scale-105 hover:bg-secondary/10">
       {/* Link wraps the card content, navigating to the product details page */}
       <Link to={`/product/${id}`}>
-        <div className="relative">
+        <div className="relative aspect-[4/3] w-full">
           {/* Product image */}
-          <img src={imageUrl} alt={title} className="w-full h-48 object-cover" />
+          <img
+            src={imageUrl}
+            alt={title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           {/* Overlay gradient for hover effect */}
-          {/* Starts from primary color with 80% opacity at the bottom */}
-          {/* Fades to transparent at the top */}
-          {/* Initially hidden (opacity-0), becomes visible on group hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         {/* Card content area */}

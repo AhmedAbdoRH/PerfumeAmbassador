@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
-import ProductCard from '../components/ProductCard';
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -16,14 +15,9 @@ export default function ProductDetails() {
   useEffect(() => {
     if (id) {
       fetchService(id);
+      fetchSuggested();
     }
   }, [id]);
-
-  useEffect(() => {
-    if (service?.category_id && service?.id) {
-      fetchSuggested(service.category_id, service.id);
-    }
-  }, [service]);
 
   const fetchService = async (serviceId: string) => {
     try {
@@ -47,15 +41,14 @@ export default function ProductDetails() {
     }
   };
 
-  const fetchSuggested = async (categoryId: string, excludeId: string | number) => {
-    const { data, error } = await supabase
+  // جلب منتجات أخرى (بدون شرط القسم)
+  const fetchSuggested = async () => {
+    const { data } = await supabase
       .from('services')
       .select('*')
-      .eq('category_id', categoryId)
-      .neq('id', excludeId)
-      .limit(4);
-    if (!error && data) setSuggested(data);
-    else setSuggested([]);
+      .neq('id', id)
+      .limit(10);
+    setSuggested(data || []);
   };
 
   const handleContact = () => {
@@ -66,6 +59,7 @@ export default function ProductDetails() {
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // Extracted background styles for reuse
   const backgroundStyles = {
     background: 'var(--background-gradient, var(--background-color, #232526))',
     backgroundSize: 'cover',
@@ -74,6 +68,7 @@ export default function ProductDetails() {
   };
 
   if (isLoading) {
+    // Added pt-24 here as well for consistency with the main view
     return (
       <div
         className="min-h-screen flex items-center justify-center pt-24"
@@ -85,6 +80,7 @@ export default function ProductDetails() {
   }
 
   if (error || !service) {
+    // Added pt-24 here as well for consistency with the main view
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center gap-4 pt-24"
@@ -103,23 +99,23 @@ export default function ProductDetails() {
 
   return (
     <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
+      {/* This div centers the product card and grows */}
+      {/* Changed pt-20 pb-8 back to py-8, as pt-24 on the outer div handles spacing from the top */}
       <div className="flex items-center justify-center flex-grow py-8">
+        {/* Increased max-width for the product card container */}
         <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
           <div className="rounded-lg shadow-lg overflow-hidden glass">
             <div className="md:flex">
               <div className="md:w-1/2">
-                <img
-                  src={service.image_url || ''}
-                  alt={service.title}
-                  className="w-full h-[400px] object-cover"
-                />
+                <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
+                  <img
+                    src={service.image_url || ''}
+                    alt={service.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
               </div>
               <div className="md:w-1/2 p-8">
-                <div className="mb-4">
-                  <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm">
-                    {/* يمكن جلب اسم القسم باستعلام منفصل إذا رغبت */}
-                  </span>
-                </div>
                 <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
                 <p className="text-white mb-6 text-lg leading-relaxed">
                   {service.description}
@@ -144,33 +140,64 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* منتجات مقترحة من نفس القسم */}
+      {/* المنتجات المقترحة */}
       {suggested.length > 0 && (
-        <div className="container mx-auto px-4 max-w-5xl mb-8">
-          <h2 className="text-2xl font-bold mb-6 text-accent text-center">منتجات مقترحة من نفس القسم</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl mb-8">
+          <h2 className="text-xl font-bold text-secondary mb-4">متوفر لدينا ايضا</h2>
+          <div
+            className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {suggested.map((item) => (
-              <ProductCard
+              <div
                 key={item.id}
-                id={item.id}
-                title={item.title}
-                description={item.description || ''}
-                imageUrl={item.image_url || ''}
-                price={item.price || ''}
-              />
+                className="
+                  min-w-[160px] max-w-[180px]
+                  md:min-w-[220px] md:max-w-[260px]
+                  bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
+                "
+                onClick={() => navigate(`/product/${item.id}`)}
+              >
+                <img
+                  src={item.image_url || ''}
+                  alt={item.title}
+                  className="w-full h-24 md:h-40 object-cover rounded"
+                />
+                <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
+                <div className="text-xs md:text-sm text-accent">{item.price}</div>
+              </div>
             ))}
           </div>
+          {/* إضافة ستايل لإخفاء الشريط وتفعيل التمرير التلقائي */}
+          <style>{`
+            .hide-scrollbar {
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+            }
+            .hide-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+            .auto-scroll-x {
+              animation: scroll-x 30s linear infinite;
+            }
+            @keyframes scroll-x {
+              0% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 0; }
+              100% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 9999px; }
+            }
+          `}</style>
         </div>
       )}
 
+      {/* This div contains the "Back to Home" button and is placed below the centered content */}
       <div className="flex justify-center pb-8">
         <button
           onClick={() => navigate('/')}
-          className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent"
+          className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent" // Added border for better visibility
         >
           ← العودة للرئيسية
         </button>
       </div>
+
     </div>
   );
 }

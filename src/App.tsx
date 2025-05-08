@@ -13,7 +13,7 @@ import ServiceDetails from './pages/ServiceDetails';
 import CategoryProducts from './pages/CategoryProducts';
 import ProductDetails from './pages/ProductDetails';
 import LoadingScreen from './components/LoadingScreen';
-import type { StoreSettings } from './types/database';
+import type { StoreSettings, Banner } from './types/database';
 import { ThemeProvider } from './theme/ThemeContext';
 
 // PrivateRoute component remains unchanged
@@ -49,30 +49,32 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  // New state to control the visibility/opacity of the main content
-  const [contentVisible, setContentVisible] = useState(false);
+  // Banner state for main banner (to preload during loading)
+  const [mainBanner, setMainBanner] = useState<Banner | null>(null);
+  const [mainContentLoaded, setMainContentLoaded] = useState(false); // New state to track main content loading
 
-  // Fetch settings and manage initial loading state
+  // Fetch settings and main banner before showing main content
   useEffect(() => {
+    let isMounted = true;
     async function initApp() {
-        await fetchStoreSettings();
-        // Wait for at least 2 seconds OR until settings are fetched, whichever is longer
-        const timer = setTimeout(() => {
-            setLoading(false); // Hide the loading screen
-        }, 2000); // Minimum 2 seconds
-        return () => clearTimeout(timer); // Cleanup timer
+      await fetchStoreSettings();
+      // جلب البانر الرئيسي أثناء شاشة التحميل
+      const { data } = await supabase
+        .from('banners')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+      if (isMounted) setMainBanner(data || null);
+
+      // Wait for at least 2 seconds OR until settings are fetched, whichever is longer
+      const timer = setTimeout(() => {
+        if (isMounted) setLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
     initApp();
+    return () => { isMounted = false; };
   }, []); // Empty dependency array means this runs once on mount
-
-  // Effect to trigger the fade-in transition when loading is complete
-  useEffect(() => {
-      if (!loading) {
-          // Set contentVisible to true right after loading becomes false
-          // This triggers the CSS transition from opacity 0 to 1
-          setContentVisible(true);
-      }
-  }, [loading]); // Depend on the loading state
 
   // Apply theme settings to CSS variables
   useEffect(() => {
@@ -115,24 +117,21 @@ function App() {
 
   // Layout component remains the same
   const Layout = ({ children }: { children: React.ReactNode }) => (
-    // Background styles are applied here based on fetched settings
     <div
       className="min-h-screen font-cairo"
       style={{
-        // Always use the same logic as the homepage for background
         background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
           ? (storeSettings as any).theme_settings.backgroundGradient
           : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
             ? (storeSettings as any).theme_settings.backgroundColor
-            : "linear-gradient(135deg, #232526 0%, #414345 100%)", // fallback to homepage gradient
+            : "linear-gradient(135deg, #232526 0%, #414345 100%)",
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
       }}
     >
       <Header storeSettings={storeSettings} />
-      {/* The actual page content goes here */}
-      {children}
+      <MainFade>{children}</MainFade>
       <Footer storeSettings={storeSettings} />
       <WhatsAppButton />
     </div>
@@ -143,7 +142,11 @@ function App() {
     return (
       <LoadingScreen
         logoUrl={storeSettings?.logo_url || '/logo.png'}
-        storeName={storeSettings?.store_name || 'متجر العطور'}
+        storeName={
+          mainBanner?.type === 'text'
+            ? mainBanner.title || storeSettings?.store_name || 'متجر العطور'
+            : storeSettings?.store_name || 'متجر العطور'
+        }
       />
     );
   }
@@ -168,54 +171,86 @@ function App() {
         <meta property="og:description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
         <meta property="og:type" content="website" />
       </Helmet>
+      <Router>
+        <Routes>
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={
+            <PrivateRoute>
+              <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
+            </PrivateRoute>
+          } />
 
-      {/* Wrapper div for the fade-in transition */}
-      {/* Apply opacity and transition based on contentVisible state */}
-      <div
-          style={{
-              opacity: contentVisible ? 1 : 0, // Opacity is 0 initially, 1 when contentVisible is true
-              transition: 'opacity 1500ms ease-in-out', // Apply a 1.5 second fade transition
-              // Ensure the wrapper doesn't collapse and covers the screen if needed
-              minHeight: '100vh',
-              width: '100%',
-          }}
-      >
-        <Router>
-          <Routes>
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={
-              <PrivateRoute>
-                <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
-              </PrivateRoute>
-            } />
-
-            {/* Public Routes using the Layout component */}
-            <Route path="/service/:id" element={
-              <Layout>
-                <ServiceDetails />
-              </Layout>
-            } />
-            <Route path="/product/:id" element={
-              <Layout>
-                <ProductDetails />
-              </Layout>
-            } />
-            <Route path="/category/:categoryId" element={
-              <Layout>
-                <CategoryProducts />
-              </Layout>
-            } />
-            <Route path="/" element={
-              <Layout>
-                <Hero storeSettings={storeSettings} />
-                <Services />
-              </Layout>
-            } />
-          </Routes>
-        </Router>
-      </div> {/* End of fade-in wrapper */}
+          {/* Public Routes using the Layout component */}
+          <Route path="/service/:id" element={
+            <Layout>
+              <ServiceDetails />
+            </Layout>
+          } />
+          <Route path="/product/:id" element={
+            <Layout>
+              <ProductDetails />
+            </Layout>
+          } />
+          <Route path="/category/:categoryId" element={
+            <Layout>
+              <CategoryProducts />
+            </Layout>
+          } />
+          <Route path="/" element={
+            <Layout>
+              <StaggeredHome
+                storeSettings={storeSettings}
+                mainBanner={mainBanner}
+                setMainContentLoaded={setMainContentLoaded}
+              />
+            </Layout>
+          } />
+        </Routes>
+      </Router>
     </ThemeProvider>
+  );
+}
+
+// مكون جديد لعرض عناصر الصفحة الرئيسية بتتالي
+function StaggeredHome({
+  storeSettings,
+  mainBanner,
+  setMainContentLoaded,
+}: {
+  storeSettings: StoreSettings | null;
+  mainBanner: Banner | null;
+  setMainContentLoaded: (v: boolean) => void;
+}) {
+  useEffect(() => {
+    setMainContentLoaded(true);
+  }, [setMainContentLoaded]);
+
+  return (
+    <>
+      <Hero storeSettings={storeSettings} banner={mainBanner} />
+      <Services onLoaded={() => {}} />
+    </>
+  );
+}
+
+// مكون لتأثير الظهور التدريجي السريع
+function MainFade({ children }: { children: React.ReactNode }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 50);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(16px)',
+        transition: 'opacity 1200ms cubic-bezier(.4,0,.2,1), transform 700ms cubic-bezier(.4,0,.2,1)',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 

@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #000000;    /* أسود حالك */
+  --color-primary: #300000;    /* أسود حالك */
   --color-secondary: #ffffff;  /* أبيض نقي */
   --color-accent: #d99323;     /* ذهبي لامع */
   --color-accent-light: #e0a745; /* ذهبي أفتح */

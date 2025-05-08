@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Banner, StoreSettings } from '../types/database';
@@ -8,24 +8,12 @@ const lightGold = '#FFD700';
 
 interface HeroProps {
   storeSettings?: StoreSettings | null;
+  banner?: Banner | null;
 }
 
-export default function Hero({ storeSettings }: HeroProps) {
-  const [banner, setBanner] = useState<Banner | null>(null);
-
-  useEffect(() => {
-    fetchActiveBanner();
-  }, []);
-
-  const fetchActiveBanner = async () => {
-    const { data } = await supabase
-      .from('banners')
-      .select('*')
-      .eq('is_active', true)
-      .single();
-    
-    setBanner(data);
-  };
+export default function Hero({ storeSettings, banner: bannerProp }: HeroProps) {
+  // استخدم البانر الممرر مباشرة بدون جلب جديد
+  const banner = bannerProp ?? null;
 
   return (
     <div className={`relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[${brownDark}] to-black overflow-hidden pt-20`}>
