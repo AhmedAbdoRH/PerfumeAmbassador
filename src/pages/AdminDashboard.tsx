@@ -6,6 +6,10 @@ import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, 
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
+const successGreen = '#228B22'; // Natural green color
+const greenButtonClass = `bg-[${successGreen}] text-white px-6 py-2 rounded flex items-center gap-2 disabled:opacity-50`;
+const greenTabClass = `bg-[${successGreen}] text-white shadow-lg border-b-4 border-[${successGreen}]`;
+const greenTabInactiveClass = 'bg-black/20 text-white';
 
 const STORE_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -1097,7 +1101,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      className="bg-[var(--primary-color,#FFD700)] text-black px-6 py-2 rounded hover:bg-yellow-500 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      className="bg-[var(--primary-color,#34C759)] text-white px-6 py-2 rounded hover:bg-[var(--primary-color,#34C759)] transition-colors flex items-center gap-2 disabled:opacity-50"
                       disabled={savingTheme}
                     >
                       <Save className="w-5 h-5" />
@@ -1137,7 +1141,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="text"
                           value={storeSettings.store_name || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, store_name: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="اسم المتجر"
                         />
                       </div>
@@ -1147,7 +1151,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="text"
                           value={storeSettings.store_description || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, store_description: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="وصف المتجر"
                         />
                       </div>
@@ -1167,7 +1171,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="logo-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
                           >
                             <Upload className="w-5 h-5 ml-2" />
                             {storeSettings.logo_url ? 'تغيير الشعار' : 'رفع الشعار'}
@@ -1195,7 +1199,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="favicon-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
                           >
                             <Upload className="w-5 h-5 ml-2" />
                             {storeSettings.favicon_url ? 'تغيير الأيقونة' : 'رفع الأيقونة'}
@@ -1223,7 +1227,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="og-image-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
+                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
                           >
                             <Upload className="w-5 h-5 ml-2" />
                             {storeSettings.og_image_url ? 'تغيير الصورة' : 'رفع الصورة'}
@@ -1246,7 +1250,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="text"
                           value={storeSettings.meta_title || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, meta_title: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="عنوان الصفحة"
                         />
                       </div>
@@ -1256,7 +1260,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="text"
                           value={storeSettings.meta_description || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, meta_description: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="وصف الصفحة"
                         />
                       </div>
@@ -1268,7 +1272,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         type="text"
                         value={storeSettings.keywords?.join(', ') || ''}
                         onChange={(e) => setStoreSettings({ ...storeSettings, keywords: e.target.value.split(',').map(k => k.trim()) })}
-                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                         placeholder="كلمة1, كلمة2, كلمة3"
                       />
                     </div>
@@ -1280,7 +1284,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="url"
                           value={storeSettings.facebook_url || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, facebook_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="https://facebook.com/..."
                         />
                       </div>
@@ -1290,7 +1294,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="url"
                           value={storeSettings.instagram_url || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, instagram_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="https://instagram.com/..."
                         />
                       </div>
@@ -1300,7 +1304,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="url"
                           value={storeSettings.twitter_url || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, twitter_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="https://twitter.com/..."
                         />
                       </div>
@@ -1310,7 +1314,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="url"
                           value={storeSettings.snapchat_url || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, snapchat_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="https://snapchat.com/..."
                         />
                       </div>
@@ -1320,7 +1324,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           type="url"
                           value={storeSettings.tiktok_url || ''}
                           onChange={(e) => setStoreSettings({ ...storeSettings, tiktok_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
+                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
                           placeholder="https://tiktok.com/..."
                         />
                       </div>
@@ -1330,7 +1334,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       <button
                         type="submit"
                         disabled={isLoading}
-                        className={`bg-[${lightGold}] text-black px-6 py-2 rounded hover:bg-yellow-500 transition-colors flex items-center gap-2 disabled:opacity-50`}
+                        className="bg-[#34C759] text-white px-4 py-2.5 rounded hover:bg-[#34C759] transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759]"
                       >
                         <Save className="w-5 h-5" />
                         حفظ الاعدادات
@@ -1351,18 +1355,18 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       onClick={() => setBannersSubTab('text')}
                       className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
                         bannersSubTab === 'text'
-                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
-                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
+                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
                       }`}
                     >
                       بانرات نصية
                     </button>
                     <button
                       onClick={() => setBannersSubTab('image')}
-                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
+                      className={`flex-1 py-2 rounded-t-lg font-bold ${
                         bannersSubTab === 'image'
-                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
-                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
+                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
                       }`}
                     >
                       بانرات صور
@@ -1380,7 +1384,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           placeholder="عنوان البانر"
                           value={newBanner.type === 'text' ? newBanner.title : ''}
                           onChange={(e) => setNewBanner({ ...newBanner, type: 'text', title: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           required
                           disabled={isLoading}
                         />
@@ -1389,7 +1393,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           value={newBanner.type === 'text' ? newBanner.description : ''}
                           onChange={(e) => setNewBanner({ ...newBanner, type: 'text', description: e.target.value })}
                           rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           disabled={isLoading}
                         />
                       </>
@@ -1406,9 +1410,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         />
                         <label
                           htmlFor="banner-image-upload"
-                          className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingBannerImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingBannerImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingBannerImage ? 'animate-pulse' : ''}`} />
+                          <Upload className={`w-5 h-5 ml-2 text-[#34C759] ${uploadingBannerImage ? 'animate-pulse' : ''}`} />
                           {uploadingBannerImage ? 'جاري رفع الصورة...' : (newBanner.image_url ? 'تغيير الصورة' : 'اختر صورة للبانر')}
                         </label>
                         {newBanner.type === 'image' && newBanner.image_url && !uploadingBannerImage && (
@@ -1438,7 +1442,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     <div className="flex gap-3">
                       <button
                         type="submit"
-                        className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`flex-grow bg-[#34C759] text-white py-2.5 px-4 rounded hover:bg-[#34C759] transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] disabled:opacity-50 disabled:cursor-not-allowed`}
                         disabled={isLoading}
                       >
                         {editingBanner ? (
@@ -1476,7 +1480,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         key={banner.id}
                         className={`
                           relative group border border-gray-700/50 rounded-xl bg-gradient-to-br from-gray-800/60 to-gray-900/40 shadow-lg transition-all duration-300 overflow-hidden
-                          ${editingBanner === banner.id ? `ring-2 ring-[${lightGold}] shadow-[0_0_16px_2px_${lightGold}33]` : 'hover:border-yellow-400/60 hover:shadow-yellow-400/10'}
+                          ${editingBanner === banner.id ? `ring-2 ring-[#34C759] shadow-[0_0_16px_2px_#34C75933]` : 'hover:border-yellow-400/60 hover:shadow-yellow-400/10'}
                         `}
                       >
                         {/* Banner type & status */}
@@ -1556,8 +1560,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       onClick={() => setProductsSubTab('services')}
                       className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
                         productsSubTab === 'services'
-                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
-                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
+                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
                       }`}
                     >
                       المنتجات
