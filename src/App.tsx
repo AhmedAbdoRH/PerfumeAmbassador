@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Helmet } from 'react-helmet-async';
 import { supabase } from './lib/supabase';
 import Header from './components/Header';
-import Hero from './components/Hero';
+import BannerSlider from './components/BannerSlider';
 import Services from './components/Services';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
@@ -49,8 +49,8 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  // Banner state for main banner (to preload during loading)
-  const [mainBanner, setMainBanner] = useState<Banner | null>(null);
+  // Banners state for homepage slider
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [mainContentLoaded, setMainContentLoaded] = useState(false); // New state to track main content loading
 
   // Fetch settings and main banner before showing main content
@@ -58,13 +58,16 @@ function App() {
     let isMounted = true;
     async function initApp() {
       await fetchStoreSettings();
-      // جلب البانر الرئيسي أثناء شاشة التحميل
-      const { data } = await supabase
+      // جلب جميع البانرات للعرض في السلايدر
+      const { data: bannersData, error: bannersError } = await supabase
         .from('banners')
         .select('*')
-        .eq('is_active', true)
-        .single();
-      if (isMounted) setMainBanner(data || null);
+        .order('created_at', { ascending: false });
+      if (bannersError) {
+        if (isMounted) setBanners([]);
+      } else {
+        if (isMounted) setBanners(bannersData || []);
+      }
 
       // Wait for at least 2 seconds OR until settings are fetched, whichever is longer
       const timer = setTimeout(() => {
@@ -201,7 +204,7 @@ function App() {
             <Layout>
               <StaggeredHome
                 storeSettings={storeSettings}
-                mainBanner={mainBanner}
+                banners={banners}
                 setMainContentLoaded={setMainContentLoaded}
               />
             </Layout>
@@ -215,11 +218,11 @@ function App() {
 // مكون جديد لعرض عناصر الصفحة الرئيسية بتتالي
 function StaggeredHome({
   storeSettings,
-  mainBanner,
+  banners,
   setMainContentLoaded,
 }: {
   storeSettings: StoreSettings | null;
-  mainBanner: Banner | null;
+  banners: Banner[];
   setMainContentLoaded: (v: boolean) => void;
 }) {
   useEffect(() => {
@@ -228,7 +231,7 @@ function StaggeredHome({
 
   return (
     <>
-      <Hero storeSettings={storeSettings} banner={mainBanner} />
+      <BannerSlider banners={banners} />
       <Services onLoaded={() => {}} />
     </>
   );
