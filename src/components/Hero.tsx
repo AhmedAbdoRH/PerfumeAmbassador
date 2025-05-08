@@ -22,21 +22,24 @@ export default function Hero({ storeSettings, banner: bannerProp }: HeroProps) {
 
       <div className="container mx-auto px-4 relative z-10">
         {banner?.type === 'image' && banner.image_url ? (
-          <div className="relative h-[70vh] rounded-2xl overflow-hidden">
-            <img 
-              src={banner.image_url} 
-              alt={banner.title || 'Banner'} 
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end">
-              <div className="p-8 text-white">
-                {banner.title && <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">{banner.title}</h1>}
-                {banner.description && <p className="text-lg sm:text-xl text-gray-200">{banner.description}</p>}
-              </div>
-            </div>
-          </div>
+          <div className="relative w-full h-40 flex items-center justify-center rounded-2xl overflow-hidden">
+  <img 
+    src={banner.image_url} 
+    alt={banner.title || 'Banner'} 
+    className="w-full h-full object-cover object-center rounded-2xl shadow-lg"
+    style={{ display: 'block', background: 'none' }}
+  />
+  { (banner.title || banner.description) && (
+    <div className="absolute inset-0 flex items-end pointer-events-none">
+      <div className="p-8 text-white w-full">
+        {banner.title && <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">{banner.title}</h1>}
+        {banner.description && <p className="text-lg sm:text-xl text-gray-200">{banner.description}</p>}
+      </div>
+    </div>
+  )}
+</div>
         ) : (
-          <div className="max-w-4xl mx-auto bg-white/5 backdrop-blur-xl rounded-2xl p-8 sm:p-12 border border-white/10 shadow-2xl shadow-black/40">
+          <div className="w-full h-40 flex flex-col justify-center items-center bg-white/5 backdrop-blur-xl rounded-2xl p-8 sm:p-12 border border-white/10 shadow-2xl shadow-black/40">
             <div className="flex justify-center mb-6">
               <Sparkles className={`h-12 w-12 sm:h-16 sm:w-16 text-[${lightGold}]`} />
             </div>

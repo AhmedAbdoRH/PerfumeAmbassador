@@ -119,37 +119,42 @@ function App() {
   };
 
   // Layout component remains the same
-  const Layout = ({ children }: { children: React.ReactNode }) => (
-    <div
-      className="min-h-screen font-cairo"
-      style={{
-        background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
-          ? (storeSettings as any).theme_settings.backgroundGradient
-          : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
-            ? (storeSettings as any).theme_settings.backgroundColor
-            : "linear-gradient(135deg, #232526 0%, #414345 100%)",
-        backgroundSize: 'cover',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      <Header storeSettings={storeSettings} />
-      <MainFade>{children}</MainFade>
-      <Footer storeSettings={storeSettings} />
-      <WhatsAppButton />
-    </div>
-  );
+  interface LayoutProps {
+  children: React.ReactNode;
+  banners: Banner[];
+}
+
+const Layout = ({ children, banners }: LayoutProps) => (
+  <div
+    className="min-h-screen font-cairo"
+    style={{
+      background: (storeSettings && (storeSettings as any).theme_settings?.backgroundGradient)
+        ? (storeSettings as any).theme_settings.backgroundGradient
+        : (storeSettings && (storeSettings as any).theme_settings?.backgroundColor)
+          ? (storeSettings as any).theme_settings.backgroundColor
+          : "linear-gradient(135deg, #232526 0%, #414345 100%)",
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+    }}
+  >
+    <Header storeSettings={storeSettings} />
+    {/* Render BannerSlider only on the homepage by checking window.location.pathname */}
+    {window.location.pathname === '/' && banners.length > 0 && (
+      <BannerSlider banners={banners} />
+    )}
+    <MainFade>{children}</MainFade>
+    <Footer storeSettings={storeSettings} />
+    <WhatsAppButton />
+  </div>
+);
 
   // Render loading screen while loading is true
   if (loading) {
     return (
       <LoadingScreen
         logoUrl={storeSettings?.logo_url || '/logo.png'}
-        storeName={
-          mainBanner?.type === 'text'
-            ? mainBanner.title || storeSettings?.store_name || 'متجر العطور'
-            : storeSettings?.store_name || 'متجر العطور'
-        }
+        storeName={storeSettings?.store_name || 'متجر العطور'}
       />
     );
   }
@@ -186,22 +191,22 @@ function App() {
 
           {/* Public Routes using the Layout component */}
           <Route path="/service/:id" element={
-            <Layout>
+            <Layout banners={banners}>
               <ServiceDetails />
             </Layout>
           } />
           <Route path="/product/:id" element={
-            <Layout>
+            <Layout banners={banners}>
               <ProductDetails />
             </Layout>
           } />
           <Route path="/category/:categoryId" element={
-            <Layout>
+            <Layout banners={banners}>
               <CategoryProducts />
             </Layout>
           } />
           <Route path="/" element={
-            <Layout>
+            <Layout banners={banners}>
               <StaggeredHome
                 storeSettings={storeSettings}
                 banners={banners}
@@ -231,7 +236,6 @@ function StaggeredHome({
 
   return (
     <>
-      <BannerSlider banners={banners} />
       <Services onLoaded={() => {}} />
     </>
   );

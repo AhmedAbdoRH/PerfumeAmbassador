@@ -23,7 +23,9 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
   if (!banners.length) return null;
 
   return (
-    <div className="w-full min-h-[70vh] flex items-center justify-center overflow-hidden relative">
+    <div
+      className="relative w-full h-[200px] md:h-[350px] lg:h-[500px] flex items-center justify-center overflow-hidden rounded-none mt-24"
+    >
       {banners.map((banner, idx) => (
         <div
           key={banner.id}
@@ -33,12 +35,12 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
             <img
               src={banner.image_url}
               alt={banner.title || 'Banner'}
-              className="w-full h-[70vh] object-cover object-center"
+              className="w-full h-full min-h-full object-cover object-center"
               style={{ borderRadius: 0 }}
             />
           ) : (
-            <div className="w-full h-[70vh] flex flex-col justify-center items-center bg-white/5 backdrop-blur-xl p-8 sm:p-12 border border-white/10 shadow-2xl">
-              {banner.title && <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-center text-white">{banner.title}</h1>}
+            <div className="w-full h-full min-h-full flex flex-col justify-center items-center bg-white/5 backdrop-blur-xl p-8 sm:p-12 border border-white/10 shadow-2xl">
+              {banner.title && <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 text-center text-white">{banner.title}</h1>}
               {banner.description && <p className="text-lg sm:text-xl mb-8 text-center text-gray-300">{banner.description}</p>}
             </div>
           )}
