@@ -1,33 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import ProductCard from './ProductCard';
-import type { Product, Category } from '../types/database';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-
+import ServiceCard from './ServiceCard';
+import { supabase } from '../lib/supabase';
+import type { Service, Category } from '../types/database';
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
+const accentColor = '#d99323'; // New accent color for selected categories
 
-export default function Products() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function Services() {
+  const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProducts();
+    fetchServices();
     fetchCategories();
   }, []);
 
-
   const fetchCategories = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "categories"));
-      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
-      const error = null;
-
-
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
       if (error) throw error;
       setCategories(data || []);
     } catch (err: any) {
@@ -35,18 +33,21 @@ export default function Products() {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchServices = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const querySnapshot = await getDocs(collection(db, "products"));
-      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Product[];
-      const error = null;
+      const { data, error } = await supabase
+        .from('services')
+        .select(`
+          *,
+          category:categories(*)
+        `)
+        .order('created_at', { ascending: false });
 
-      
       if (error) throw error;
-      setProducts(data || []);
+      setServices(data || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -54,9 +55,9 @@ export default function Products() {
     }
   };
 
-  const filteredProducts = selectedCategory
-    ? products.filter(product => product.category_id?.includes(selectedCategory))
-    : products;
+  const filteredServices = selectedCategory
+    ? services.filter(service => service.category_id === selectedCategory)
+    : services;
 
   if (isLoading) {
     return (
@@ -79,17 +80,18 @@ export default function Products() {
   }
 
   return (
-    <section className={`py-16 bg-gradient-to-br from-[${brownDark}] to-black`} id="products">
+    <section className={`py-16 bg-gradient-to-br from-[${brownDark}] via-[${brownDark}] to-black`} id="products">
       <div className="container mx-auto px-4
-                   bg-white/5
+                   bg-gradient-to-br from-[${brownDark}] via-[${brownDark}] to-black
                    backdrop-blur-xl
                    rounded-2xl
                    p-8
-                   border border-white/10
+                   border border-[${lightGold}]/20
                    shadow-2xl shadow-black/40">
         <h2 className={`text-3xl font-bold text-center mb-12 text-[${lightGold}]`}>
           تشكيلة العطور
         </h2>
+        <div className="w-full h-1 bg-[${lightGold}] mb-8"></div>
 
         {/* Category Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
@@ -97,8 +99,8 @@ export default function Products() {
             onClick={() => setSelectedCategory(null)}
             className={`p-4 rounded-xl transition-all duration-300 ${
               !selectedCategory
-                ? `bg-[${lightGold}] text-black font-bold`
-                : 'bg-white/5 text-white hover:bg-white/10'
+                ? `bg-white/5 text-white font-bold shadow-md`
+                : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
             }`}
           >
             جميع العطور
@@ -108,9 +110,9 @@ export default function Products() {
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
               className={`p-4 rounded-xl transition-all duration-300 ${
-                selectedCategory === category.id
-                  ? `bg-[${lightGold}] text-black font-bold`
-                  : 'bg-white/5 text-white hover:bg-white/10'
+                category.id === selectedCategory
+                  ? `bg-white/5 text-white font-bold shadow-md`
+                  : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
               }`}
             >
               <h3 className="text-lg font-semibold mb-1">{category.name}</h3>
@@ -122,14 +124,14 @@ export default function Products() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              title={product.title}
-              description={product.description || ''}
-              imageUrl={product.image_url || ''}
-              price={product.price || ''}
+          {filteredServices.map((service) => (
+            <ServiceCard
+              key={service.id}
+              id={service.id}
+              title={service.title}
+              description={service.description || ''}
+              imageUrl={service.image_url || ''}
+              price={service.price || ''}
             />
           ))}
         </div>

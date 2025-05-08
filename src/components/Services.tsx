@@ -5,6 +5,7 @@ import type { Service, Category } from '../types/database';
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
+const accentColor = '#d99323'; // New accent color for selected categories
 
 export default function Services() {
   const [services, setServices] = useState<Service[]>([]);
@@ -90,6 +91,7 @@ export default function Services() {
         <h2 className={`text-3xl font-bold text-center mb-12 text-[${lightGold}]`}>
           تشكيلة العطور
         </h2>
+        <div className="w-full h-1 bg-[${lightGold}] mb-8"></div>
 
         {/* Category Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
@@ -97,8 +99,8 @@ export default function Services() {
             onClick={() => setSelectedCategory(null)}
             className={`p-4 rounded-xl transition-all duration-300 ${
               !selectedCategory
-                ? `bg-[${lightGold}] text-black font-bold`
-                : 'bg-white/5 text-white hover:bg-white/10'
+                ? `bg-white/5 text-white font-bold shadow-md`
+                : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
             }`}
           >
             جميع العطور
@@ -108,9 +110,9 @@ export default function Services() {
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
               className={`p-4 rounded-xl transition-all duration-300 ${
-                selectedCategory === category.id
-                  ? `bg-[${lightGold}] text-black font-bold`
-                  : 'bg-white/5 text-white hover:bg-white/10'
+                category.id === selectedCategory
+                  ? `bg-white/5 text-white font-bold shadow-md`
+                  : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
               }`}
             >
               <h3 className="text-lg font-semibold mb-1">{category.name}</h3>
