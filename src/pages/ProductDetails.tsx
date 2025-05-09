@@ -27,6 +27,9 @@ export default function ProductDetails() {
   const [currentTransform, setCurrentTransform] = useState('translateX(0)');
   const [prevTransform, setPrevTransform] = useState('translateX(0)');
 
+  // استخدم مؤشر منفصل للصورة السابقة
+  const [prevImageIndexState, setPrevImageIndexState] = useState<number | null>(null);
+
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -120,6 +123,29 @@ export default function ProductDetails() {
     return () => clearTimeout(timer);
   }, [currentImage]);
 
+  // عند تغيير الصورة، احفظ المؤشر السابق قبل التغيير
+  useEffect(() => {
+    setPrevImageIndexState(currentImage);
+  }, [currentImage]);
+
+  // انتقال الصور: الصورة الجديدة تبدأ من اليمين وتدخل، والصورة السابقة تخرج لليسار
+  useEffect(() => {
+    setCurrentTransform('translateX(100%)'); // الصورة الجديدة تبدأ خارج الشاشة يميناً
+    setPrevTransform('translateX(0)');      // الصورة السابقة في مكانها
+    const timer = setTimeout(() => {
+      setCurrentTransform('translateX(0)');     // الصورة الجديدة تدخل مكانها
+      setPrevTransform('translateX(-100%)');    // الصورة السابقة تخرج يساراً
+    }, 50);
+    // بعد انتهاء الانتقال، احذف الصورة السابقة من العرض
+    const cleanup = setTimeout(() => {
+      setPrevImageIndexState(null);
+    }, 3500);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cleanup);
+    };
+  }, [currentImage]);
+
   if (isLoading) {
     // Added pt-24 here as well for consistency with the main view
     return (
@@ -159,9 +185,9 @@ export default function ProductDetails() {
             <div className="md:flex">
               <div className="md:w-1/2">
                 <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
-                  {previousImageIndex !== undefined && previousImageIndex !== currentImage && (
+                  {prevImageIndexState !== null && prevImageIndexState !== currentImage && (
                     <img
-                      src={images[previousImageIndex]}
+                      src={images[prevImageIndexState]}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out"
                       style={{ transform: prevTransform, zIndex: 10 }}
