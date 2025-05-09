@@ -173,14 +173,14 @@ export default function ProductDetails() {
                     <img
                       src={images[previousImageIndex]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-2500 ease-in-out"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // duration updated to 3500
                       style={{ transform: prevTransform, zIndex: 10 }}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-2500 ease-in-out"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // duration updated to 3500
                     style={{ transform: currentTransform, zIndex: 5 }}
                   />
                   {images.length > 1 && (
