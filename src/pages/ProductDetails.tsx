@@ -12,19 +12,6 @@ export default function ProductDetails() {
   const [error, setError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<Service[]>([]);
 
-  // أضف hook لتتبع الصورة الحالية لكل منتج مقترح
-  const [suggestedImageIndexes, setSuggestedImageIndexes] = useState<{ [id: string]: number }>({});
-
-  // إعادة تعيين الفهارس عند تغيير suggested
-  useEffect(() => {
-    if (!suggested.length) return;
-    const initialIndexes: { [id: string]: number } = {};
-    suggested.forEach((item) => {
-      initialIndexes[item.id] = 0;
-    });
-    setSuggestedImageIndexes(initialIndexes);
-  }, [suggested]);
-
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -72,30 +59,25 @@ export default function ProductDetails() {
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // التقليب التلقائي للصور الإضافية (gallery)
+  // التقليب التلقائي للصور في المنتج الرئيسي فقط
+  const images: string[] = [
+    service?.image_url || '',
+    ...(Array.isArray(service?.gallery) ? service.gallery : [])
+  ].filter(Boolean);
+
+  const [currentImage, setCurrentImage] = useState(0);
+
   useEffect(() => {
-    if (!suggested.length) return;
+    if (images.length <= 1) return;
     const interval = setInterval(() => {
-      setSuggestedImageIndexes((prev) => {
-        const next: { [id: string]: number } = { ...prev };
-        suggested.forEach((item) => {
-          // استخدم gallery بدلاً من image_urls
-          const images: string[] = [
-            item.image_url || '',
-            ...(Array.isArray(item.gallery) ? item.gallery : [])
-          ].filter(Boolean);
-          if (images.length > 1) {
-            const current = prev[item.id] || 0;
-            next[item.id] = (current + 1) % images.length;
-          } else {
-            next[item.id] = 0;
-          }
-        });
-        return next;
-      });
+      setCurrentImage((prev) => (prev + 1) % images.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [suggested]);
+  }, [images.length]);
+
+  useEffect(() => {
+    setCurrentImage(0);
+  }, [service?.id]);
 
   // Extracted background styles for reuse
   const backgroundStyles = {
@@ -138,19 +120,50 @@ export default function ProductDetails() {
   return (
     <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
       {/* This div centers the product card and grows */}
-      {/* Changed pt-20 pb-8 back to py-8, as pt-24 on the outer div handles spacing from the top */}
       <div className="flex items-center justify-center flex-grow py-8">
-        {/* Increased max-width for the product card container */}
         <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
           <div className="rounded-lg shadow-lg overflow-hidden glass">
             <div className="md:flex">
               <div className="md:w-1/2">
                 <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
                   <img
-                    src={service.image_url || ''}
+                    src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
                   />
+                  {images.length > 1 && (
+                    <>
+                      {/* أزرار تقليب يدوية */}
+                      <button
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                        onClick={() => setCurrentImage((currentImage - 1 + images.length) % images.length)}
+                        aria-label="السابق"
+                        type="button"
+                      >
+                        {'<'}
+                      </button>
+                      <button
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                        onClick={() => setCurrentImage((currentImage + 1) % images.length)}
+                        aria-label="التالي"
+                        type="button"
+                      >
+                        {'>'}
+                      </button>
+                      {/* مؤشرات الصور */}
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                        {images.map((img, idx) => (
+                          <button
+                            key={img + idx}
+                            className={`w-3 h-3 rounded-full border ${currentImage === idx ? 'bg-yellow-400 border-yellow-500' : 'bg-gray-400/50 border-gray-300/50'}`}
+                            onClick={() => setCurrentImage(idx)}
+                            aria-label={`عرض الصورة رقم ${idx + 1}`}
+                            type="button"
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="md:w-1/2 p-8">
@@ -187,13 +200,12 @@ export default function ProductDetails() {
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {suggested.map((item) => {
-              // استخدم gallery بدلاً من image_urls
+              // فقط أول صورة (بدون تقليب تلقائي)
               const images: string[] = [
                 item.image_url || '',
                 ...(Array.isArray(item.gallery) ? item.gallery : [])
               ].filter(Boolean);
-              const currentIndex = suggestedImageIndexes[item.id] || 0;
-              const imageUrl = images.length > 0 ? images[currentIndex] : '';
+              const imageUrl = images[0] || '';
 
               return (
                 <div
