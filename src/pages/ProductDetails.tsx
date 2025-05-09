@@ -23,6 +23,10 @@ export default function ProductDetails() {
   // New state to control fade-out of previous image
   const [prevOpacity, setPrevOpacity] = useState(1);
 
+  // إضافة حالتين للتحكم في انتقال الصور
+  const [currentTransform, setCurrentTransform] = useState('translateX(0)');
+  const [prevTransform, setPrevTransform] = useState('translateX(0)');
+
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -111,6 +115,21 @@ export default function ProductDetails() {
     return () => clearTimeout(timer);
   }, [currentImage]);
 
+  // تعديل التأثير عند تغيير currentImage
+  useEffect(() => {
+    // ابدأ بتحريك الصورة الجديدة من اليسار
+    setCurrentTransform('translateX(-100%)');
+    // الصورة السابقة تبدأ من موقعها الحالي
+    setPrevTransform('translateX(0)');
+    const timer = setTimeout(() => {
+      // تحول الصورة الجديدة إلى موقعها النهائي
+      setCurrentTransform('translateX(0)');
+      // تنزلق الصورة السابقة للخارج إلى اليمين
+      setPrevTransform('translateX(100%)');
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentImage]);
+
   if (isLoading) {
     // Added pt-24 here as well for consistency with the main view
     return (
@@ -154,15 +173,15 @@ export default function ProductDetails() {
                     <img
                       src={images[previousImageIndex]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
-                      style={{ opacity: prevOpacity, zIndex: 10 }}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1500 ease-in-out"
+                      style={{ transform: prevTransform, zIndex: 10 }}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
-                    style={{ opacity: 1, zIndex: 5 }}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-1500 ease-in-out"
+                    style={{ transform: currentTransform, zIndex: 5 }}
                   />
                   {images.length > 1 && (
                     <>
