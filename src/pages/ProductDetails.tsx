@@ -129,7 +129,7 @@ export default function ProductDetails() {
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-2000"
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-2000 ease-in-out"
                   />
                   {images.length > 1 && (
                     <>
@@ -157,7 +157,7 @@ export default function ProductDetails() {
                         {images.map((img, idx) => (
                           <button
                             key={img + idx}
-                            className={`w-3 h-3 rounded-full border-none transition-colors duration-300 ${
+                            className={`w-2 h-2 rounded-full border-none transition-colors ease-in-out duration-500 ${
                               currentImage === idx ? 'bg-white' : 'bg-white/30'
                             }`}
                             onClick={() => setCurrentImage(idx)}
