@@ -71,7 +71,7 @@ export default function ProductDetails() {
     if (images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % images.length);
-    }, 6000); // تم تغيير الفترة إلى 6000 ملي ثانية (6 ثوانٍ)
+    }, 5000); // فترة 5000 ملي ثانية (5 ثوانٍ)
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -127,13 +127,13 @@ export default function ProductDetails() {
               <div className="md:w-1/2">
                 <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
                   <img
+                    key={currentImage} // إعادة تركيب العنصر عند تغير الصورة لتفعيل انتقال opacity
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-2000 ease-in-out"
+                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
                   />
                   {images.length > 1 && (
                     <>
-                      {/* أزرار تقليب يدوية - مخفية */}
                       {/*
                       <button
                         className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
