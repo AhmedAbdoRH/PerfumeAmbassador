@@ -1917,9 +1917,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       <footer className="w-full flex justify-center py-8 mt-10">
         <button
           onClick={() => navigate('/')}
-          className="bg-white/70 hover:bg-white text-black font-bold px-8 py-3 rounded-full shadow-lg transition-colors border-2 border-yellow-600"
+          className="bg-white/70 hover:bg-white text-black font-bold px-8 py-3 rounded-full shadow-lg transition-colors border-2 "
         >
-          العودة للصفحة الرئيسية
+            ← العودة للصفحة الرئيسية
         </button>
       </footer>
     </div>
