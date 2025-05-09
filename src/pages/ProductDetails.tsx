@@ -115,7 +115,7 @@ export default function ProductDetails() {
     return () => clearTimeout(timer);
   }, [currentImage]);
 
-  // تعديل التأثير عند تغيير currentImage
+  // تعديل تأثير الانتقال ليكون أبطأ: زيادة مدة الانتقال إلى 3500ms، مع تأخير 1000ms عند بدء التحريك
   useEffect(() => {
     // ابدأ بتحريك الصورة الجديدة من اليسار
     setCurrentTransform('translateX(-100%)');
@@ -126,7 +126,7 @@ export default function ProductDetails() {
       setCurrentTransform('translateX(0)');
       // تنزلق الصورة السابقة للخارج إلى اليمين
       setPrevTransform('translateX(100%)');
-    }, 50);
+    }, 1000); // تأخير 1000ms
     return () => clearTimeout(timer);
   }, [currentImage]);
 
@@ -173,14 +173,14 @@ export default function ProductDetails() {
                     <img
                       src={images[previousImageIndex]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // duration updated to 3500
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // مدة الانتقال 3500ms
                       style={{ transform: prevTransform, zIndex: 10 }}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // duration updated to 3500
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // مدة الانتقال 3500ms
                     style={{ transform: currentTransform, zIndex: 5 }}
                   />
                   {images.length > 1 && (
