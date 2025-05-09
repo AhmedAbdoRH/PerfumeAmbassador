@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
+
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +87,9 @@ export default function ProductDetails() {
     setCurrentImage(0);
   }, [service?.id]);
 
+  // استخدام usePrevious لحفظ مؤشر الصورة السابقة
+  const previousImageIndex = usePrevious(currentImage);
+
   // Extracted background styles for reuse
   const backgroundStyles = {
     background: 'var(--background-gradient, var(--background-color, #232526))',
@@ -126,32 +137,22 @@ export default function ProductDetails() {
             <div className="md:flex">
               <div className="md:w-1/2">
                 <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
+                  {previousImageIndex !== undefined && previousImageIndex !== currentImage && (
+                    <img
+                      src={images[previousImageIndex]}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
+                      style={{ opacity: 0 }}
+                    />
+                  )}
                   <img
-                    key={currentImage} // إعادة تركيب العنصر عند تغير الصورة لتفعيل انتقال opacity
                     src={images[currentImage] || ''}
                     alt={service.title}
                     className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
+                    style={{ opacity: 1 }}
                   />
                   {images.length > 1 && (
                     <>
-                      {/*
-                      <button
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
-                        onClick={() => setCurrentImage((currentImage - 1 + images.length) % images.length)}
-                        aria-label="السابق"
-                        type="button"
-                      >
-                        {'<'}
-                      </button>
-                      <button
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
-                        onClick={() => setCurrentImage((currentImage + 1) % images.length)}
-                        aria-label="التالي"
-                        type="button"
-                      >
-                        {'>'}
-                      </button>
-                      */}
                       {/* مؤشرات الصور */}
                       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                         {images.map((img, idx) => (
