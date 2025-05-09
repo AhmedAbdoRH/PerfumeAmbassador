@@ -48,13 +48,16 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
       ))}
       {/* المؤشرات */}
       {banners.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-0.5 z-20">
           {banners.map((_, idx) => (
             <button
               key={idx}
-              className={`w-3 h-3 rounded-full ${current === idx ? 'bg-yellow-400' : 'bg-gray-400/50'} transition-colors`}
+              className={`w-1.5 h-1.5 rounded-full transition-colors border border-white/15
+                ${current === idx ? 'bg-white/20' : 'bg-white/10'}
+              `}
               onClick={() => setCurrent(idx)}
               aria-label={`انتقل إلى البانر رقم ${idx + 1}`}
+              style={{ minWidth: 6, minHeight: 6 }}
             />
           ))}
         </div>
