@@ -105,16 +105,6 @@ export default function ProductDetails() {
     backgroundAttachment: 'fixed',
   };
 
-  // Whenever currentImage changes, start fade-out effect for the previous image
-  useEffect(() => {
-    // Reset opacity to 1 immediately when the image changes
-    setPrevOpacity(1);
-    const timer = setTimeout(() => {
-      setPrevOpacity(0);
-    }, 50); // delay 50ms to trigger transition
-    return () => clearTimeout(timer);
-  }, [currentImage]);
-
   // تعديل تأثير الانتقال ليكون أبطأ: زيادة مدة الانتقال إلى 3500ms، مع تأخير 1000ms عند بدء التحريك
   useEffect(() => {
     // ابدأ بتحريك الصورة الجديدة من اليسار
@@ -173,14 +163,14 @@ export default function ProductDetails() {
                     <img
                       src={images[previousImageIndex]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // مدة الانتقال 3500ms
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out"
                       style={{ transform: prevTransform, zIndex: 10 }}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out" // مدة الانتقال 3500ms
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out"
                     style={{ transform: currentTransform, zIndex: 5 }}
                   />
                   {images.length > 1 && (
