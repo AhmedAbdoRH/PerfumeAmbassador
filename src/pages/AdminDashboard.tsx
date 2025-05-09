@@ -781,69 +781,21 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     navigate('/admin/login');
   };
 
-  // أضف هذه الدالة أعلى الكومبوننت
-  async function compressImage(file: File, maxWidth = 900, maxHeight = 900, quality = 0.7): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const img = new window.Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxWidth || height > maxHeight) {
-          const aspect = width / height;
-          if (width > height) {
-            width = maxWidth;
-            height = Math.round(maxWidth / aspect);
-          } else {
-            height = maxHeight;
-            width = Math.round(maxHeight * aspect);
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error('فشل ضغط الصورة'));
-          },
-          'image/jpeg',
-          quality
-        );
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  }
-
-  // استبدل handleGalleryUpload بهذه النسخة الاحترافية:
+  // عند رفع صورة جديدة للمعرض، لا تكرر الصورة الرئيسية في المعرض
   const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     setUploadingImage(true);
     setError(null);
-    let compressed = false;
     try {
       const uploadedUrls: string[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
-        let uploadFile = file;
-        // ضغط الصورة إذا كانت أكبر من 1MB
-        if (file.size > 1024 * 1024) {
-          uploadFile = new File(
-            [await compressImage(file, 900, 900, 0.7)],
-            file.name.replace(/\.[^.]+$/, '.jpg'),
-            { type: 'image/jpeg' }
-          );
-          compressed = true;
-        }
-        const fileExt = uploadFile.name.split('.').pop();
+        const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('services')
-          .upload(fileName, uploadFile, { upsert: true });
+          .upload(fileName, file, { upsert: true });
         if (uploadError) continue;
         const { data: { publicUrl } } = supabase.storage
           .from('services')
@@ -859,7 +811,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           gallery: filteredGallery,
         };
       });
-      if (compressed) setSuccessMsg('تم ضغط الصور الكبيرة تلقائياً لتسريع الرفع.');
     } catch (err: any) {
       setError(`خطأ في رفع الصور: ${err.message}`);
     } finally {
@@ -1707,7 +1658,56 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="image-upload"
-                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor
+                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
+                            {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
+                          </label>
+                          {newService.image_url && !uploadingImage && (
+                            <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
+                              <img
+                                src={newService.image_url}
+                                alt="معاينة"
+                                className="w-16 h-16 object-cover rounded border border-gray-700"
+                              />
+                              <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
+                              <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
+                                <X size={16}/>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {/* اختيار القسم */}
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-70 disabled:cursor-not-allowed`}
+                          required
+                          disabled={isLoading || categories.length === 0}
+                        >
+                          <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id} className="bg-gray-800 text-white">
+                              {category.name}
+                            </option>
+                          ))}
+                          {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
+                        </select>
+                        {/* السعر */}
+                        <input
+                          type="text"
+                          placeholder="السعر (مثال: 150 ريال أو مجاني)"
+                          value={newService.price}
+                          onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                          disabled={isLoading}
+                        />
+                        {/* رفع الصور الإضافية */}
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج</label>
+                          <input
+                            type="file"
+                            accept="image/*"
                             multiple
                             onChange={handleGalleryUpload}
                             className="w-full p-2 rounded bg-black/20 text-white border border-white/10"
