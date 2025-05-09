@@ -15,6 +15,16 @@ export default function ProductDetails() {
   // أضف hook لتتبع الصورة الحالية لكل منتج مقترح
   const [suggestedImageIndexes, setSuggestedImageIndexes] = useState<{ [id: string]: number }>({});
 
+  // إعادة تعيين الفهارس عند تغيير suggested
+  useEffect(() => {
+    if (!suggested.length) return;
+    const initialIndexes: { [id: string]: number } = {};
+    suggested.forEach((item) => {
+      initialIndexes[item.id] = 0;
+    });
+    setSuggestedImageIndexes(initialIndexes);
+  }, [suggested]);
+
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -65,12 +75,10 @@ export default function ProductDetails() {
   // التقليب التلقائي للصور
   useEffect(() => {
     if (!suggested.length) return;
-
     const interval = setInterval(() => {
       setSuggestedImageIndexes((prev) => {
-        const next: { [id: string]: number } = {};
+        const next: { [id: string]: number } = { ...prev };
         suggested.forEach((item) => {
-          // إذا كان لدى المنتج أكثر من صورة
           let images: string[] = [];
           if (Array.isArray((item as any).image_urls)) {
             images = (item as any).image_urls;
@@ -85,7 +93,6 @@ export default function ProductDetails() {
         return next;
       });
     }, 3000);
-
     return () => clearInterval(interval);
   }, [suggested]);
 
@@ -175,7 +182,7 @@ export default function ProductDetails() {
         <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl mb-8">
           <h2 className="text-xl font-bold text-secondary mb-4">متوفر لدينا ايضا</h2>
           <div
-            className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
+            className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {suggested.map((item) => {
@@ -219,13 +226,6 @@ export default function ProductDetails() {
             }
             .hide-scrollbar::-webkit-scrollbar {
               display: none;
-            }
-            .auto-scroll-x {
-              animation: scroll-x 30s linear infinite;
-            }
-            @keyframes scroll-x {
-              0% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 0; }
-              100% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 9999px; }
             }
           `}</style>
         </div>
