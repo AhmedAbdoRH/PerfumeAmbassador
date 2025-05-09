@@ -20,6 +20,9 @@ export default function ProductDetails() {
   const [error, setError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<Service[]>([]);
 
+  // New state to control fade-out of previous image
+  const [prevOpacity, setPrevOpacity] = useState(1);
+
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -98,6 +101,16 @@ export default function ProductDetails() {
     backgroundAttachment: 'fixed',
   };
 
+  // Whenever currentImage changes, start fade-out effect for the previous image
+  useEffect(() => {
+    // Reset opacity to 1 immediately when the image changes
+    setPrevOpacity(1);
+    const timer = setTimeout(() => {
+      setPrevOpacity(0);
+    }, 50); // delay 50ms to trigger transition
+    return () => clearTimeout(timer);
+  }, [currentImage]);
+
   if (isLoading) {
     // Added pt-24 here as well for consistency with the main view
     return (
@@ -142,7 +155,7 @@ export default function ProductDetails() {
                       src={images[previousImageIndex]}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
-                      style={{ opacity: 0 }}
+                      style={{ opacity: prevOpacity }}
                     />
                   )}
                   <img
