@@ -618,7 +618,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       description: service.description || '',
       image_url: service.image_url || '',
       price: service.price || '',
-      category_id: service.category_id || ''
+      category_id: service.category_id || '',
+      gallery: Array.isArray(service.gallery) ? service.gallery : [], // Ensure gallery is loaded for editing
     });
     setSelectedCategory(service.category_id || '');
     const formElement = document.getElementById('service-form');
@@ -639,7 +640,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         description: newService.description,
         image_url: newService.image_url,
         price: newService.price,
-        category_id: selectedCategory
+        category_id: selectedCategory,
+        gallery: Array.isArray(newService.gallery) ? newService.gallery : [], // أضف هذا السطر
       };
       const { error } = await supabase
         .from('services')
@@ -1615,8 +1617,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       onClick={() => setProductsSubTab('categories')}
                       className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
                         productsSubTab === 'categories'
-                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
-                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
+                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
+                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
                       }`}
                     >
                       الأقسام
@@ -1633,7 +1635,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           placeholder="عنوان المنتج"
                           value={newService.title}
                           onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           required
                           disabled={isLoading}
                         />
@@ -1643,7 +1645,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           value={newService.description}
                           onChange={(e) => setNewService({ ...newService, description: e.target.value })}
                           rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
                         {/* رفع الصورة */}
@@ -1658,9 +1660,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           />
                           <label
                             htmlFor="image-upload"
-                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
-                            <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
+                            <Upload className={`w-5 h-5 ml-2 text-[#34C759] ${uploadingImage ? 'animate-pulse' : ''}`} />
                             {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
                           </label>
                           {newService.image_url && !uploadingImage && (
@@ -1681,7 +1683,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         <select
                           value={selectedCategory}
                           onChange={(e) => setSelectedCategory(e.target.value)}
-                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-70 disabled:cursor-not-allowed`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-70 disabled:cursor-not-allowed`}
                           required
                           disabled={isLoading || categories.length === 0}
                         >
@@ -1699,7 +1701,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           placeholder="السعر (مثال: 150 ريال أو مجاني)"
                           value={newService.price}
                           onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
                         {/* رفع الصور الإضافية */}
@@ -1781,7 +1783,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
                         {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
                         {services.map((service) => (
-                          <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                          <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[#34C759] shadow-lg shadow-[#34C759]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
                             <div className="flex justify-between items-start gap-4">
                               {/* صورة المنتج أولاً */}
                               {service.image_url && (
@@ -1797,7 +1799,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                                 </div>
                                 <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
                                 {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
-                                {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
+                                {service.price && <p className={`font-semibold mt-2 text-[#34C759] text-lg`}>{service.price}</p>}
                               </div>
                               <div className="flex gap-3 flex-shrink-0">
                                 <button
@@ -1833,7 +1835,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           placeholder="اسم القسم"
                           value={newCategory.name}
                           onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           required
                           disabled={isLoading}
                         />
@@ -1842,13 +1844,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           value={newCategory.description}
                           onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                           rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
+                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
                           disabled={isLoading}
                         />
                         <div className="flex gap-3">
                           <button
                             type="submit"
-                            className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
+                            className={`flex-grow bg-[#34C759] text-white py-2.5 px-4 rounded hover:bg-[#34C759] transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] disabled:opacity-50 disabled:cursor-not-allowed`}
                             disabled={isLoading}
                           >
                             {editingCategory ? (
@@ -1875,7 +1877,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
                         {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
                         {categories.map((category) => (
-                          <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
+                          <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[#34C759] shadow-lg shadow-[#34C759]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
                             <div className="flex justify-between items-start gap-4">
                               <div className="flex-1 overflow-hidden">
                                 <h4 className="font-bold text-white text-lg truncate" title={category.name}>{category.name}</h4>
