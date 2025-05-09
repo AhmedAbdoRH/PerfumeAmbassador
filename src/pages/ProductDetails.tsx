@@ -4,6 +4,26 @@ import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center pt-24">
+          <div className="text-xl text-red-500">حدث خطأ غير متوقع في عرض المنتج.</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -11,6 +31,7 @@ export default function ProductDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<Service[]>([]);
+  const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -67,187 +88,201 @@ export default function ProductDetails() {
     backgroundAttachment: 'fixed',
   };
 
-  if (isLoading) {
-    // Added pt-24 here as well for consistency with the main view
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center pt-24"
-        style={backgroundStyles}
-      >
-        <div className="text-xl text-secondary">جاري التحميل...</div>
-      </div>
-    );
-  }
-
-  if (error || !service) {
-    // Added pt-24 here as well for consistency with the main view
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4 pt-24"
-        style={backgroundStyles}
-      >
-        <div className="text-xl text-secondary">{error || 'المنتج غير موجود'}</div>
-        <button
-          onClick={() => navigate('/')}
-          className="bg-secondary text-primary px-6 py-2 rounded-lg hover:bg-opacity-90"
+  try {
+    if (isLoading) {
+      // Added pt-24 here as well for consistency with the main view
+      return (
+        <div
+          className="min-h-screen flex items-center justify-center pt-24"
+          style={backgroundStyles}
         >
-          العودة للرئيسية
-        </button>
-      </div>
-    );
-  }
+          <div className="text-xl text-secondary">جاري التحميل...</div>
+        </div>
+      );
+    }
 
-  return (
-    <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
-      {/* This div centers the product card and grows */}
-      {/* Changed pt-20 pb-8 back to py-8, as pt-24 on the outer div handles spacing from the top */}
-      <div className="flex items-center justify-center flex-grow py-8">
-        {/* Increased max-width for the product card container */}
-        <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
-          <div className="rounded-lg shadow-lg overflow-hidden glass">
-            <div className="md:flex">
-              <div className="md:w-1/2">
-                {/* سلايدر صور المنتج */}
-                <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
-                  {(() => {
-                    const images: string[] = [
-                      ...(service.image_url ? [service.image_url] : []),
-                      ...((service.images_urls || []).filter((img) => img && img !== service.image_url))
-                    ];
-                    const [current, setCurrent] = React.useState(0);
-                    // Auto-play
-                    React.useEffect(() => {
-                      if (images.length <= 1) return;
-                      const timer = setInterval(() => {
-                        setCurrent((prev) => (prev + 1) % images.length);
-                      }, 2500);
-                      return () => clearInterval(timer);
-                    }, [images.length]);
-                    if (images.length === 0) return (
-                      <div className="flex items-center justify-center w-full h-full text-gray-400">لا توجد صور</div>
-                    );
-                    return (
-                      <>
+    if (error || !service) {
+      // Added pt-24 here as well for consistency with the main view
+      return (
+        <div
+          className="min-h-screen flex flex-col items-center justify-center gap-4 pt-24"
+          style={backgroundStyles}
+        >
+          <div className="text-xl text-secondary">{error || 'المنتج غير موجود'}</div>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-secondary text-primary px-6 py-2 rounded-lg hover:bg-opacity-90"
+          >
+            العودة للرئيسية
+          </button>
+        </div>
+      );
+    }
+
+    // دعم الصور الإضافية للمنتج
+    // تأكد من إزالة الصورة الرئيسية من الصور الإضافية إذا كانت مكررة
+    const images: string[] = React.useMemo(() => {
+      if (!service) return [];
+      const gallery = Array.isArray(service.gallery) ? service.gallery : [];
+      // Remove duplicates and ensure the main image is first
+      const allImages = [service.image_url, ...gallery].filter(Boolean) as string[];
+      // Remove duplicates (including main image repeated in gallery)
+      return Array.from(new Set(allImages));
+    }, [service]);
+
+    // سلايدر تلقائي للصور
+    useEffect(() => {
+      if (!images.length || images.length === 1) return;
+      const timer = setTimeout(() => {
+        setCurrentImage((prev) => (prev + 1) % images.length);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }, [currentImage, images.length]);
+
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
+          {/* This div centers the product card and grows */}
+          {/* Changed pt-20 pb-8 back to py-8, as pt-24 on the outer div handles spacing from the top */}
+          <div className="flex items-center justify-center flex-grow py-8">
+            {/* Increased max-width for the product card container */}
+            <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
+              <div className="rounded-lg shadow-lg overflow-hidden glass">
+                <div className="md:flex">
+                  <div className="md:w-1/2 flex flex-col items-center justify-center">
+                    {/* سلايدر صور المنتج */}
+                    {images.length > 0 && (
+                      <div className="relative w-full aspect-[4/3] bg-gray-200 rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden flex items-center justify-center">
                         <img
-                          src={images[current]}
+                          src={images[currentImage]}
                           alt={service.title}
-                          className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
+                          className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
+                          key={images[currentImage]}
                         />
-                        {/* أزرار التقليب */}
                         {images.length > 1 && (
                           <>
                             <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setCurrent((prev) => (prev - 1 + images.length) % images.length); }}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70 z-10"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                              onClick={() => setCurrentImage((currentImage - 1 + images.length) % images.length)}
                               aria-label="السابق"
+                              type="button"
                             >
                               &#8592;
                             </button>
                             <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setCurrent((prev) => (prev + 1) % images.length); }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70 z-10"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                              onClick={() => setCurrentImage((currentImage + 1) % images.length)}
                               aria-label="التالي"
+                              type="button"
                             >
                               &#8594;
                             </button>
-                            {/* نقاط التقدم */}
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                              {images.map((_, idx) => (
-                                <span key={idx} className={`w-2 h-2 rounded-full ${idx === current ? 'bg-yellow-400' : 'bg-white/40'} border border-black/30`}></span>
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                              {images.map((img, idx) => (
+                                <button
+                                  key={img + idx}
+                                  className={`w-3 h-3 rounded-full border ${currentImage === idx ? 'bg-yellow-400 border-yellow-500' : 'bg-gray-400/50 border-gray-300/50'}`}
+                                  onClick={() => setCurrentImage(idx)}
+                                  aria-label={`عرض الصورة رقم ${idx + 1}`}
+                                  type="button"
+                                />
                               ))}
                             </div>
                           </>
                         )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-              <div className="md:w-1/2 p-8">
-                <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
-                <p className="text-white mb-6 text-lg leading-relaxed">
-                  {service.description}
-                </p>
-                <div className="border-t border-gray-700 pt-6 mb-6">
-                  <div className="text-2xl font-bold text-accent mb-6">
-                    {service.price}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={handleContact}
-                      className="flex-1 bg-[#25D366] text-white py-3 px-6 rounded-lg font-bold hover:bg-opacity-90 flex items-center justify-center gap-2"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      تواصل معنا للطلب
-                    </button>
+                  <div className="md:w-1/2 p-8">
+                    <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
+                    <p className="text-white mb-6 text-lg leading-relaxed">
+                      {service.description}
+                    </p>
+                    <div className="border-t border-gray-700 pt-6 mb-6">
+                      <div className="text-2xl font-bold text-accent mb-6">
+                        {service.price}
+                      </div>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={handleContact}
+                          className="flex-1 bg-[#25D366] text-white py-3 px-6 rounded-lg font-bold hover:bg-opacity-90 flex items-center justify-center gap-2"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                          تواصل معنا للطلب
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* المنتجات المقترحة */}
-      {suggested.length > 0 && (
-        <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl mb-8">
-          <h2 className="text-xl font-bold text-secondary mb-4">متوفر لدينا ايضا</h2>
-          <div
-            className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {suggested.map((item) => (
+          {/* المنتجات المقترحة */}
+          {suggested.length > 0 && (
+            <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl mb-8">
+              <h2 className="text-xl font-bold text-secondary mb-4">متوفر لدينا ايضا</h2>
               <div
-                key={item.id}
-                className="
-                  min-w-[160px] max-w-[180px]
-                  md:min-w-[220px] md:max-w-[260px]
-                  bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
-                "
-                onClick={() => navigate(`/product/${item.id}`)}
+                className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
+                style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <img
-                  src={item.image_url || ''}
-                  alt={item.title}
-                  className="w-full h-24 md:h-40 object-cover rounded"
-                />
-                <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
-                <div className="text-xs md:text-sm text-accent">{item.price}</div>
+                {suggested.map((item) => (
+                  <div
+                    key={item.id}
+                    className="
+                      min-w-[160px] max-w-[180px]
+                      md:min-w-[220px] md:max-w-[260px]
+                      bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
+                    "
+                    onClick={() => navigate(`/product/${item.id}`)}
+                  >
+                    <img
+                      src={item.image_url || ''}
+                      alt={item.title}
+                      className="w-full h-24 md:h-40 object-cover rounded"
+                    />
+                    <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
+                    <div className="text-xs md:text-sm text-accent">{item.price}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+              <style>{`
+                .hide-scrollbar {
+                  scrollbar-width: none;
+                  -ms-overflow-style: none;
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                  display: none;
+                }
+                .auto-scroll-x {
+                  animation: scroll-x 30s linear infinite;
+                }
+                @keyframes scroll-x {
+                  0% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 0; }
+                  100% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 9999px; }
+                }
+              `}</style>
+            </div>
+          )}
+          <div className="flex justify-center pb-8">
+            <button
+              onClick={() => navigate('/')}
+              className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent"
+            >
+              ← العودة للرئيسية
+            </button>
           </div>
-          {/* إضافة ستايل لإخفاء الشريط وتفعيل التمرير التلقائي */}
-          <style>{`
-            .hide-scrollbar {
-              scrollbar-width: none;
-              -ms-overflow-style: none;
-            }
-            .hide-scrollbar::-webkit-scrollbar {
-              display: none;
-            }
-            .auto-scroll-x {
-              animation: scroll-x 30s linear infinite;
-            }
-            @keyframes scroll-x {
-              0% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 0; }
-              100% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 9999px; }
-            }
-          `}</style>
+          <footer className="bg-secondary text-primary text-center py-4">
+            جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
+          </footer>
         </div>
-      )}
-
-      {/* This div contains the "Back to Home" button and is placed below the centered content */}
-      <div className="flex justify-center pb-8">
-        <button
-          onClick={() => navigate('/')}
-          className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent" // Added border for better visibility
-        >
-          ← العودة للرئيسية
-        </button>
+      </ErrorBoundary>
+    );
+  } catch (err) {
+    // fallback UI if something escapes ErrorBoundary (should not happen)
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-24">
+        <div className="text-xl text-red-500">حدث خطأ غير متوقع في عرض المنتج.</div>
       </div>
-
-    </div>
-  );
+    );
+  }
 }
