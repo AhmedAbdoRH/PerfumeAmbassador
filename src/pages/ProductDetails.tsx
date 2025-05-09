@@ -72,17 +72,18 @@ export default function ProductDetails() {
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // التقليب التلقائي للصور
+  // التقليب التلقائي للصور الإضافية (gallery)
   useEffect(() => {
     if (!suggested.length) return;
     const interval = setInterval(() => {
       setSuggestedImageIndexes((prev) => {
         const next: { [id: string]: number } = { ...prev };
         suggested.forEach((item) => {
-          let images: string[] = [];
-          if (Array.isArray((item as any).image_urls)) {
-            images = (item as any).image_urls;
-          }
+          // استخدم gallery بدلاً من image_urls
+          const images: string[] = [
+            item.image_url || '',
+            ...(Array.isArray(item.gallery) ? item.gallery : [])
+          ].filter(Boolean);
           if (images.length > 1) {
             const current = prev[item.id] || 0;
             next[item.id] = (current + 1) % images.length;
@@ -186,16 +187,13 @@ export default function ProductDetails() {
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {suggested.map((item) => {
-              // دعم الصور المتعددة
-              let images: string[] = [];
-              if (Array.isArray((item as any).image_urls)) {
-                images = (item as any).image_urls;
-              }
+              // استخدم gallery بدلاً من image_urls
+              const images: string[] = [
+                item.image_url || '',
+                ...(Array.isArray(item.gallery) ? item.gallery : [])
+              ].filter(Boolean);
               const currentIndex = suggestedImageIndexes[item.id] || 0;
-              const imageUrl =
-                images.length > 0
-                  ? images[currentIndex]
-                  : item.image_url || '';
+              const imageUrl = images.length > 0 ? images[currentIndex] : '';
 
               return (
                 <div
