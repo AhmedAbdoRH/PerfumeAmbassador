@@ -132,27 +132,19 @@ export default function ProductDetails() {
 
   // انتقال الصور: الصورة الجديدة تبدأ من اليمين وتدخل، والصورة السابقة تخرج لليسار
   useEffect(() => {
-    // إعدادات الانتقال
-    const DURATION = 1800; // مدة الانتقال الفعلي (ms)
-    const DELAY = 0; // لا حاجة لتأخير إضافي
-
-    // ابدأ الانتقال فقط إذا لم يكن هناك انتقال جارٍ
     setIsTransitioning(true);
-    setCurrentTransform('translateX(100%)'); // الصورة الجديدة تبدأ خارج الشاشة يميناً
-    setPrevTransform('translateX(0)');      // الصورة السابقة في مكانها
-
-    // استخدم requestAnimationFrame لضمان تطبيق الترانزيشن بعد إعادة الرسم
-    let raf = requestAnimationFrame(() => {
-      setCurrentTransform('translateX(0)');     // الصورة الجديدة تدخل مكانها
-      setPrevTransform('translateX(-100%)');    // الصورة السابقة تخرج يساراً
+    setCurrentTransform('translateX(100%)');
+    setPrevTransform('translateX(0)');
+    // استخدم raf لضمان تطبيق الترانزيشن بعد إعادة الرسم
+    const raf = requestAnimationFrame(() => {
+      setCurrentTransform('translateX(0)');
+      setPrevTransform('translateX(-100%)');
     });
-
     // بعد انتهاء الانتقال، احذف الصورة السابقة من العرض
     const cleanup = setTimeout(() => {
       setPrevImageIndexState(null);
       setIsTransitioning(false);
-    }, DURATION);
-
+    }, TRANSITION_DURATION);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(cleanup);
@@ -207,7 +199,7 @@ export default function ProductDetails() {
                         transform: prevTransform,
                         zIndex: 10,
                         transition: isTransitioning
-                          ? 'transform 1800ms cubic-bezier(.4,0,.2,1)'
+                          ? `transform ${TRANSITION_DURATION}ms cubic-bezier(.4,0,.2,1)`
                           : 'none',
                         willChange: 'transform',
                       }}
@@ -222,7 +214,7 @@ export default function ProductDetails() {
                       transform: currentTransform,
                       zIndex: 5,
                       transition: isTransitioning
-                        ? 'transform 1800ms cubic-bezier(.4,0,.2,1)'
+                        ? `transform ${TRANSITION_DURATION}ms cubic-bezier(.4,0,.2,1)`
                         : 'none',
                       willChange: 'transform',
                     }}
