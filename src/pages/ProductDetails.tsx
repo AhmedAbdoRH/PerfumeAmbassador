@@ -91,7 +91,7 @@ export default function ProductDetails() {
     if (images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % images.length);
-    }, 5000); // فترة 5000 ملي ثانية (5 ثوانٍ)
+    }, 4000); // فترة 5000 ملي ثانية (5 ثوانٍ)
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -121,7 +121,7 @@ export default function ProductDetails() {
       setCurrentTransform('translateX(0)');
       // تنزلق الصورة السابقة للخارج إلى اليمين
       setPrevTransform('translateX(100%)');
-    }, 1000); // تأخير 1000ms
+    }, 2000); // تأخير 1000ms
     return () => clearTimeout(timer);
   }, [currentImage]);
 
