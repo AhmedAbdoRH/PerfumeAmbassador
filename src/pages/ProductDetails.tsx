@@ -126,7 +126,7 @@ export default function ProductDetails() {
       setCurrentTransform('translateX(0)');
       // تنزلق الصورة السابقة للخارج إلى اليمين
       setPrevTransform('translateX(100%)');
-    }, 500);
+    }, 50);
     return () => clearTimeout(timer);
   }, [currentImage]);
 
