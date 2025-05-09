@@ -155,14 +155,14 @@ export default function ProductDetails() {
                       src={images[previousImageIndex]}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
-                      style={{ opacity: prevOpacity }}
+                      style={{ opacity: prevOpacity, zIndex: 10 }}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
                     className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ease-in-out"
-                    style={{ opacity: 1 }}
+                    style={{ opacity: 1, zIndex: 5 }}
                   />
                   {images.length > 1 && (
                     <>
