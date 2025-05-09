@@ -71,7 +71,7 @@ export default function ProductDetails() {
     if (images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % images.length);
-    }, 3000);
+    }, 4500); // أبطأ: 4.5 ثانية
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -129,33 +129,25 @@ export default function ProductDetails() {
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-1500"
                   />
                   {images.length > 1 && (
                     <>
-                      {/* أزرار تقليب يدوية */}
-                      <button
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
-                        onClick={() => setCurrentImage((currentImage - 1 + images.length) % images.length)}
-                        aria-label="السابق"
-                        type="button"
-                      >
-                        {'<'}
-                      </button>
-                      <button
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
-                        onClick={() => setCurrentImage((currentImage + 1) % images.length)}
-                        aria-label="التالي"
-                        type="button"
-                      >
-                        {'>'}
-                      </button>
+                      {/* أزرار تقليب يدوية - مخفية */}
+                      {/* 
+                      <button ...> {'<'} </button>
+                      <button ...> {'>'} </button>
+                      */}
                       {/* مؤشرات الصور */}
                       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                         {images.map((img, idx) => (
                           <button
                             key={img + idx}
-                            className={`w-3 h-3 rounded-full border ${currentImage === idx ? 'bg-yellow-400 border-yellow-500' : 'bg-gray-400/50 border-gray-300/50'}`}
+                            className={`w-3 h-3 rounded-full border-none transition-colors duration-300 ${
+                              currentImage === idx
+                                ? 'bg-white'
+                                : 'bg-white/30'
+                            }`}
                             onClick={() => setCurrentImage(idx)}
                             aria-label={`عرض الصورة رقم ${idx + 1}`}
                             type="button"
