@@ -1,1925 +1,288 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Category, Service, Banner, StoreSettings } from '../types/database';
-import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, Instagram, Twitter, Palette, Store, Image, List, Package } from 'lucide-react';
+import type { Service } from '../types/database';
+import { MessageCircle } from 'lucide-react';
 
-const lightGold = '#FFD700';
-const brownDark = '#3d2c1d';
-const successGreen = '#228B22'; // Natural green color
-const greenButtonClass = `bg-[${successGreen}] text-white px-6 py-2 rounded flex items-center gap-2 disabled:opacity-50`;
-const greenTabClass = `bg-[${successGreen}] text-white shadow-lg border-b-4 border-[${successGreen}]`;
-const greenTabInactiveClass = 'bg-black/20 text-white';
-
-const STORE_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
-
-interface AdminDashboardProps {
-  onSettingsUpdate?: () => void;
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center pt-24">
+          <div className="text-xl text-red-500">حدث خطأ غير متوقع في عرض المنتج.</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+export default function ProductDetails() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
-  const [editingService, setEditingService] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editingBanner, setEditingBanner] = useState<string | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('products');
-  const [productsSubTab, setProductsSubTab] = useState<'services' | 'categories'>('services');
-  const [bannersSubTab, setBannersSubTab] = useState<'text' | 'image'>('text');
-
-  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
-  const [newService, setNewService] = useState({
-    title: '',
-    description: '',
-    image_url: '',
-    price: '',
-    category_id: '',
-    gallery: [] as string[], // أضف هذا الحقل
-  });
-  const [newBanner, setNewBanner] = useState({
-    type: 'text' as 'text' | 'image',
-    title: '',
-    description: '',
-    image_url: '',
-    is_active: false
-  });
-
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
-    id: '',
-    store_name: '',
-    store_description: '',
-    logo_url: '',
-    favicon_url: '',
-    og_image_url: '',
-    meta_title: '',
-    meta_description: '',
-    keywords: [],
-    facebook_url: '',
-    instagram_url: '',
-    twitter_url: '',
-    snapchat_url: '',
-    tiktok_url: '',
-    updated_at: ''
-  });
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [uploadingFavicon, setUploadingFavicon] = useState(false);
-  const [uploadingOgImage, setUploadingOgImage] = useState(false);
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [keywordInput, setKeywordInput] = useState('');
-
-  const [themeSettings, setThemeSettings] = useState({
-    primaryColor: '#FFD700',
-    secondaryColor: '#3d2c1d',
-    backgroundType: 'solid', // 'solid' or 'gradient'
-    backgroundColor: '#1a1a1a',
-    gradientStartColor: '#FFD700',
-    gradientEndColor: '#3d2c1d',
-    gradientAngle: 135,
-    backgroundGradient: '',
-    fontFamily: 'Cairo',
-  });
-  const [savingTheme, setSavingTheme] = useState(false);
-
-  const navigate = useNavigate();
+  const [suggested, setSuggested] = useState<Service[]>([]);
+  const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
-    const initialize = async () => {
+    if (id) {
+      fetchService(id);
+      fetchSuggested();
+    }
+  }, [id]);
+
+  const fetchService = async (serviceId: string) => {
+    try {
       setIsLoading(true);
-      try {
-        await checkAuth();
-        await fetchData();
-        await fetchStoreSettings();
-        await fetchLogoUrl();
-        await fetchThemeSettings();
-        applyThemeSettings(themeSettings);
-      } catch (err: any) {
-        setError(`خطأ أثناء التهيئة: ${err.message}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setError(null);
 
-    initialize();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/admin/login');
-    }
-  };
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
-
-      const { data: servicesData, error: servicesError } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('services')
-        .select(`*, category:categories(*)`)
-        .order('created_at', { ascending: false });
-      if (servicesError) throw servicesError;
-      setServices(servicesData || []);
-
-      const { data: bannersData, error: bannersError } = await supabase
-        .from('banners')
         .select('*')
-        .order('created_at', { ascending: false });
-      if (bannersError) throw bannersError;
-      setBanners(bannersData || []);
-    } catch (err: any) {
-      setError(`خطأ في جلب البيانات: ${err.message}`);
-      setCategories([]);
-      setServices([]);
-      setBanners([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchLogoUrl = async () => {
-    const { data } = supabase.storage.from('services').getPublicUrl('logo.png');
-    if (data?.publicUrl) {
-      try {
-        const response = await fetch(data.publicUrl, { method: 'HEAD' });
-        if (response.ok) {
-          setLogoUrl(`${data.publicUrl}?t=${new Date().getTime()}`);
-        } else {
-          setLogoUrl(null);
-        }
-      } catch (fetchError) {
-        console.warn("لم يتم العثور على الشعار الحالي:", fetchError);
-        setLogoUrl(null);
-      }
-    } else {
-      setLogoUrl(null);
-    }
-  };
-
-  const fetchStoreSettings = async () => {
-    try {
-      const { data: allRows, error } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('id', STORE_SETTINGS_ID);
-
-      if (error) {
-        setError(`خطأ في جلب إعدادات المتجر: ${error.message}`);
-        return;
-      }
-
-      if (allRows && allRows.length > 0) {
-        setStoreSettings(allRows[0]);
-      } else {
-        setStoreSettings({
-          id: STORE_SETTINGS_ID,
-          store_name: '',
-          store_description: '',
-          logo_url: '',
-          favicon_url: '',
-          og_image_url: '',
-          meta_title: '',
-          meta_description: '',
-          keywords: [],
-          facebook_url: '',
-          instagram_url: '',
-          twitter_url: '',
-          snapchat_url: '',
-          tiktok_url: '',
-          updated_at: ''
-        });
-      }
-    } catch (err: any) {
-      setError(`خطأ في جلب إعدادات المتجر: ${err.message}`);
-    }
-  };
-
-  const fetchThemeSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('store_settings')
-        .select('theme_settings')
-        .eq('id', STORE_SETTINGS_ID)
+        .eq('id', serviceId)
         .single();
-      if (error) return;
-      if (data?.theme_settings) {
-        const t = data.theme_settings;
-        // استنتاج نوع الخلفية من القيم المخزنة
-        let backgroundType = 'solid';
-        if (t.backgroundGradient && t.backgroundGradient !== '') backgroundType = 'gradient';
-        setThemeSettings({
-          ...t,
-          backgroundType,
-          gradientStartColor: t.gradientStartColor || '#FFD700',
-          gradientEndColor: t.gradientEndColor || '#3d2c1d',
-          gradientAngle: t.gradientAngle || 135,
-        });
-      }
-    } catch {}
-  };
 
-  const handleThemeSettingsSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingTheme(true);
-    try {
-      // خزّن فقط الخاصية المناسبة حسب نوع الخلفية
-      let toSave = { ...themeSettings };
-      if (themeSettings.backgroundType === 'solid') {
-        toSave.backgroundGradient = '';
-      } else if (themeSettings.backgroundType === 'gradient') {
-        toSave.backgroundGradient = `linear-gradient(${themeSettings.gradientAngle}deg, ${themeSettings.gradientStartColor}, ${themeSettings.gradientEndColor})`;
-        toSave.backgroundColor = '';
-      }
-      // لا تخزن backgroundType في القاعدة
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { backgroundType, ...dbTheme } = toSave;
-      const { error } = await supabase
-        .from('store_settings')
-        .update({ theme_settings: dbTheme })
-        .eq('id', STORE_SETTINGS_ID);
-      if (error) throw error;
-      setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
-      applyThemeSettings(dbTheme);
-      // تحديث بيانات storeSettings محلياً حتى تظهر التغييرات مباشرة
-      setStoreSettings(prev => ({
-        ...prev,
-        theme_settings: dbTheme
-      }));
-      // إعلام التطبيق الرئيسي لإعادة تحميل الإعدادات
-      if (onSettingsUpdate) onSettingsUpdate();
+      if (fetchError) throw fetchError;
+      if (!data) throw new Error('المنتج غير موجود');
+
+      setService(data);
     } catch (err: any) {
-      setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
-    } finally {
-      setSavingTheme(false);
-    }
-  };
-
-  const applyThemeSettings = (settings: typeof themeSettings) => {
-    const root = document.documentElement;
-    root.style.setProperty('--primary-color', settings.primaryColor);
-    root.style.setProperty('--secondary-color', settings.secondaryColor);
-    root.style.setProperty('--font-family', settings.fontFamily);
-    if (settings.backgroundType === 'gradient' && settings.backgroundGradient) {
-      root.style.setProperty('--background-gradient', settings.backgroundGradient);
-      root.style.setProperty('--background-color', '');
-    } else {
-      root.style.setProperty('--background-gradient', '');
-      root.style.setProperty('--background-color', settings.backgroundColor);
-    }
-  };
-
-  const handleStoreSettingsUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase
-        .from('store_settings')
-        .update({
-          store_name: storeSettings.store_name,
-          store_description: storeSettings.store_description,
-          logo_url: storeSettings.logo_url,
-          favicon_url: storeSettings.favicon_url,
-          og_image_url: storeSettings.og_image_url,
-          meta_title: storeSettings.meta_title,
-          meta_description: storeSettings.meta_description,
-          keywords: storeSettings.keywords,
-          facebook_url: storeSettings.facebook_url,
-          instagram_url: storeSettings.instagram_url,
-          twitter_url: storeSettings.twitter_url,
-          snapchat_url: storeSettings.snapchat_url,
-          tiktok_url: storeSettings.tiktok_url
-        })
-        .eq('id', storeSettings.id);
-
-      if (error) throw error;
-      onSettingsUpdate?.();
-    } catch (err: any) {
-      setError(`خطأ في تحديث إعدادات المتجر: ${err.message}`);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSettingsImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-    type: 'logo' | 'favicon' | 'og_image'
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingImage(true);
-    setError(null);
-
-    try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error('الرجاء اختيار ملف صورة صالح');
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${type}_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('services')
-        .upload(fileName, file, {
-          cacheControl: '0',
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('services')
-        .getPublicUrl(fileName);
-
-      setStoreSettings(prev => ({
-        ...prev,
-        [type === 'logo' ? 'logo_url' : type === 'favicon' ? 'favicon_url' : 'og_image_url']: publicUrl
-      }));
-
-    } catch (err: any) {
-      setError(`خطأ في رفع الصورة: ${err.message}`);
-    } finally {
-      setUploadingImage(false);
-    }
+  // جلب منتجات أخرى (بدون شرط القسم)
+  const fetchSuggested = async () => {
+    const { data } = await supabase
+      .from('services')
+      .select('*')
+      .neq('id', id)
+      .limit(10);
+    setSuggested(data || []);
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-    type: 'logo' | 'favicon' | 'og_image' | 'service' | 'banner'
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const uploadingStateSetters = {
-      logo: setUploadingLogo,
-      favicon: setUploadingFavicon,
-      og_image: setUploadingOgImage,
-      service: setUploadingImage,
-      banner: setUploadingBannerImage
-    };
-
-    const setUploading = uploadingStateSetters[type];
-    setUploading(true);
-    setError(null);
-
-    try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error('الرجاء اختيار ملف صورة صالح');
-      }
-      const maxSize = type === 'favicon' ? 0.5 * 1024 * 1024 : 2 * 1024 * 1024;
-      if (file.size > maxSize) {
-        throw new Error(`حجم الصورة يجب أن لا يتجاوز ${maxSize / (1024 * 1024)} ميجابايت`);
-      }
-      const fileExt = file.name.split('.').pop();
-      const fileName = type === 'logo' ? 'logo.png' :
-        type === 'favicon' ? 'favicon.png' :
-        type === 'og_image' ? 'og-image.png' :
-        `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage
-        .from('services')
-        .getPublicUrl(fileName);
-      if (type === 'logo') {
-        setLogoUrl(publicUrl);
-        setStoreSettings(prev => ({ ...prev, logo_url: publicUrl }));
-      } else if (type === 'favicon') {
-        setStoreSettings(prev => ({ ...prev, favicon_url: publicUrl }));
-      } else if (type === 'og_image') {
-        setStoreSettings(prev => ({ ...prev, og_image_url: publicUrl }));
-      } else if (type === 'service') {
-        setNewService(prev => ({ ...prev, image_url: publicUrl }));
-      } else if (type === 'banner') {
-        setNewBanner(prev => ({ ...prev, image_url: publicUrl }));
-      }
-    } catch (err: any) {
-      setError(`خطأ في رفع الصورة: ${err.message}`);
-    } finally {
-      setUploading(false);
-    }
+  const handleContact = () => {
+    if (!service) return;
+    const productUrl = window.location.href;
+    const message = `استفسار عن المنتج: ${service.title}
+رابط المنتج: ${productUrl}`;
+    window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const handleAddKeyword = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && keywordInput.trim()) {
-      e.preventDefault();
-      setKeywords(prev => [...prev, keywordInput.trim()]);
-      setKeywordInput('');
-    }
+  // Extracted background styles for reuse
+  const backgroundStyles = {
+    background: 'var(--background-gradient, var(--background-color, #232526))',
+    backgroundSize: 'cover',
+    backgroundRepeat: 'no-repeat',
+    backgroundAttachment: 'fixed',
   };
 
-  const handleRemoveKeyword = (indexToRemove: number) => {
-    setKeywords(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'service' | 'banner' = 'service') => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const uploadingState = type === 'service' ? setUploadingImage : setUploadingBannerImage;
-    const setNewState = type === 'service' ? setNewService : setNewBanner;
-
-    uploadingState(true);
-    setError(null);
-    try {
-      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
-      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload(filePath, file);
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
-      setNewState(prev => ({ ...prev, image_url: publicUrl }));
-
-    } catch (err: any) {
-      setError(`خطأ في رفع الصورة: ${err.message}`);
-      setNewState(prev => ({ ...prev, image_url: '' }));
-    } finally {
-      uploadingState(false);
-    }
-  };
-
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingLogo(true);
-    setError(null);
-    try {
-      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
-      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
-
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload('logo.png', file, {
-          cacheControl: '0',
-          upsert: true
-        });
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl('logo.png');
-      setLogoUrl(`${publicUrl}?t=${new Date().getTime()}`);
-
-    } catch (err: any) {
-      setError(`خطأ في رفع الشعار: ${err.message}`);
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategory.name.trim()) {
-      setError("اسم القسم مطلوب.");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.from('categories').insert([newCategory]);
-      if (error) throw error;
-      setNewCategory({ name: '', description: '' });
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في إضافة القسم: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category.id);
-    setNewCategory({ name: category.name, description: category.description || '' });
-    const formElement = document.getElementById('category-form');
-    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleUpdateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCategory || !newCategory.name.trim()) {
-      setError("اسم القسم مطلوب.");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ name: newCategory.name, description: newCategory.description })
-        .eq('id', editingCategory);
-      if (error) throw error;
-
-      setNewCategory({ name: '', description: '' });
-      setEditingCategory(null);
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في تحديث القسم: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelEditCategory = () => {
-    setEditingCategory(null);
-    setNewCategory({ name: '', description: '' });
-    setError(null);
-  };
-
-  const handleDeleteConfirmation = async () => {
-    if (!deleteModal) return;
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      if (deleteModal.type === 'category') {
-        await supabase.from('services').delete().eq('category_id', deleteModal.id);
-        await supabase.from('categories').delete().eq('id', deleteModal.id);
-      } else if (deleteModal.type === 'service') {
-        await supabase.from('services').delete().eq('id', deleteModal.id);
-      } else if (deleteModal.type === 'banner') {
-        await supabase.from('banners').delete().eq('id', deleteModal.id);
-      }
-
-      setDeleteModal(null);
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ أثناء الحذف: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    setDeleteModal({ id, type: 'category' });
-  };
-
-  const handleDeleteService = (id: string) => {
-    setDeleteModal({ id, type: 'service' });
-  };
-
-  const handleDeleteBanner = (id: string) => {
-    setDeleteModal({ id, type: 'banner' });
-  };
-
-  const handleAddService = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCategory || !newService.title.trim()) {
-      setError("يجب اختيار قسم وتحديد عنوان للمنتج.");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const serviceToAdd = {
-        ...newService,
-        category_id: selectedCategory
-      };
-      const { error } = await supabase.from('services').insert([serviceToAdd]);
-      if (error) throw error;
-
-      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
-      setSelectedCategory('');
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في إضافة المنتج: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditService = (service: Service) => {
-    setEditingService(service.id);
-    setNewService({
-      title: service.title,
-      description: service.description || '',
-      image_url: service.image_url || '',
-      price: service.price || '',
-      category_id: service.category_id || ''
-    });
-    setSelectedCategory(service.category_id || '');
-    const formElement = document.getElementById('service-form');
-    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleUpdateService = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingService || !selectedCategory || !newService.title.trim()) {
-      setError("يجب اختيار قسم وتحديد عنوان للمنتج.");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const serviceToUpdate = {
-        title: newService.title,
-        description: newService.description,
-        image_url: newService.image_url,
-        price: newService.price,
-        category_id: selectedCategory
-      };
-      const { error } = await supabase
-        .from('services')
-        .update(serviceToUpdate)
-        .eq('id', editingService);
-      if (error) throw error;
-
-      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
-      setSelectedCategory('');
-      setEditingService(null);
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في تحديث المنتج: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingService(null);
-    setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
-    setSelectedCategory('');
-    setError(null);
-  };
-
-  const handleAddBanner = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newBanner.type === 'text' && !newBanner.title.trim()) {
-      setError("عنوان البانر مطلوب للنوع النصي.");
-      return;
-    }
-    if (newBanner.type === 'image' && !newBanner.image_url) {
-      setError("صورة البانر مطلوبة للنوع المصور.");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      if (newBanner.is_active) {
-        await supabase
-          .from('banners')
-          .update({ is_active: false })
-          .neq('id', '00000000-0000-0000-0000-000000000000');
-      }
-
-      const { error } = await supabase.from('banners').insert([newBanner]);
-      if (error) throw error;
-
-      setNewBanner({
-        type: 'text',
-        title: '',
-        description: '',
-        image_url: '',
-        is_active: false
-      });
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في إضافة البانر: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditBanner = (banner: Banner) => {
-    setEditingBanner(banner.id);
-    setNewBanner({
-      type: banner.type,
-      title: banner.title || '',
-      description: banner.description || '',
-      image_url: banner.image_url || '',
-      is_active: banner.is_active
-    });
-    const formElement = document.getElementById('banner-form');
-    formElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleUpdateBanner = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingBanner) return;
-    
-    if (newBanner.type === 'text' && !newBanner.title.trim()) {
-      setError("عنوان البانر مطلوب للنوع النصي.");
-      return;
-    }
-    if (newBanner.type === 'image' && !newBanner.image_url) {
-      setError("صورة البانر مطلوبة للنوع المصور.");
-      return;
+  try {
+    if (isLoading) {
+      // Added pt-24 here as well for consistency with the main view
+      return (
+        <div
+          className="min-h-screen flex items-center justify-center pt-24"
+          style={backgroundStyles}
+        >
+          <div className="text-xl text-secondary">جاري التحميل...</div>
+        </div>
+      );
     }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      if (newBanner.is_active) {
-        await supabase
-          .from('banners')
-          .update({ is_active: false })
-          .neq('id', editingBanner);
-      }
-
-      const { error } = await supabase
-        .from('banners')
-        .update(newBanner)
-        .eq('id', editingBanner);
-      if (error) throw error;
-
-      setNewBanner({
-        type: 'text',
-        title: '',
-        description: '',
-        image_url: '',
-        is_active: false
-      });
-      setEditingBanner(null);
-      await fetchData();
-    } catch (err: any) {
-      setError(`خطأ في تحديث البانر: ${err.message}`);
-    } finally {
-      setIsLoading(false);
+    if (error || !service) {
+      // Added pt-24 here as well for consistency with the main view
+      return (
+        <div
+          className="min-h-screen flex flex-col items-center justify-center gap-4 pt-24"
+          style={backgroundStyles}
+        >
+          <div className="text-xl text-secondary">{error || 'المنتج غير موجود'}</div>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-secondary text-primary px-6 py-2 rounded-lg hover:bg-opacity-90"
+          >
+            العودة للرئيسية
+          </button>
+        </div>
+      );
     }
-  };
 
-  const handleCancelEditBanner = () => {
-    setEditingBanner(null);
-    setNewBanner({
-      type: 'text',
-      title: '',
-      description: '',
-      image_url: '',
-      is_active: false
-    });
-    setError(null);
-  };
+    // دعم الصور الإضافية للمنتج
+    // تأكد من إزالة الصورة الرئيسية من الصور الإضافية إذا كانت مكررة
+    const images: string[] = React.useMemo(() => {
+      if (!service) return [];
+      const gallery = Array.isArray(service.gallery) ? service.gallery : [];
+      // Remove duplicates and ensure the main image is first
+      const allImages = [service.image_url, ...gallery].filter(Boolean) as string[];
+      // Remove duplicates (including main image repeated in gallery)
+      return Array.from(new Set(allImages));
+    }, [service]);
 
-  const handleLogout = async () => {
-    setIsLoading(true);
-    setError(null);
-    await supabase.auth.signOut();
-    setIsLoading(false);
-    navigate('/admin/login');
-  };
+    // سلايدر تلقائي للصور
+    useEffect(() => {
+      if (!images.length || images.length === 1) return;
+      const timer = setTimeout(() => {
+        setCurrentImage((prev) => (prev + 1) % images.length);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }, [currentImage, images.length]);
 
-  // عند رفع صورة جديدة للمعرض، لا تكرر الصورة الرئيسية في المعرض
-  const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    setUploadingImage(true);
-    setError(null);
-    try {
-      const uploadedUrls: string[] = [];
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('services')
-          .upload(fileName, file, { upsert: true });
-        if (uploadError) continue;
-        const { data: { publicUrl } } = supabase.storage
-          .from('services')
-          .getPublicUrl(fileName);
-        uploadedUrls.push(publicUrl);
-      }
-      setNewService(prev => {
-        // Remove duplicates and main image from gallery if present
-        const gallery = [...(prev.gallery || []), ...uploadedUrls].filter(Boolean);
-        const filteredGallery = Array.from(new Set(gallery)).filter(img => img !== prev.image_url);
-        return {
-          ...prev,
-          gallery: filteredGallery,
-        };
-      });
-    } catch (err: any) {
-      setError(`خطأ في رفع الصور: ${err.message}`);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  if (isLoading && categories.length === 0 && services.length === 0) {
     return (
-      <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-[${brownDark}] to-black text-white font-[Cairo]`} dir="rtl">
-        <div className="text-xl animate-pulse">جاري التحميل...</div>
+      <ErrorBoundary>
+        <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
+          {/* This div centers the product card and grows */}
+          {/* Changed pt-20 pb-8 back to py-8, as pt-24 on the outer div handles spacing from the top */}
+          <div className="flex items-center justify-center flex-grow py-8">
+            {/* Increased max-width for the product card container */}
+            <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
+              <div className="rounded-lg shadow-lg overflow-hidden glass">
+                <div className="md:flex">
+                  <div className="md:w-1/2 flex flex-col items-center justify-center">
+                    {/* سلايدر صور المنتج */}
+                    {images.length > 0 && (
+                      <div className="relative w-full aspect-[4/3] bg-gray-200 rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden flex items-center justify-center">
+                        <img
+                          src={images[currentImage]}
+                          alt={service.title}
+                          className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
+                          key={images[currentImage]}
+                        />
+                        {images.length > 1 && (
+                          <>
+                            <button
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                              onClick={() => setCurrentImage((currentImage - 1 + images.length) % images.length)}
+                              aria-label="السابق"
+                              type="button"
+                            >
+                              &#8592;
+                            </button>
+                            <button
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-2 hover:bg-black/70 transition z-10"
+                              onClick={() => setCurrentImage((currentImage + 1) % images.length)}
+                              aria-label="التالي"
+                              type="button"
+                            >
+                              &#8594;
+                            </button>
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                              {images.map((img, idx) => (
+                                <button
+                                  key={img + idx}
+                                  className={`w-3 h-3 rounded-full border ${currentImage === idx ? 'bg-yellow-400 border-yellow-500' : 'bg-gray-400/50 border-gray-300/50'}`}
+                                  onClick={() => setCurrentImage(idx)}
+                                  aria-label={`عرض الصورة رقم ${idx + 1}`}
+                                  type="button"
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:w-1/2 p-8">
+                    <h1 className="text-3xl font-bold mb-4 text-secondary">{service.title}</h1>
+                    <p className="text-white mb-6 text-lg leading-relaxed">
+                      {service.description}
+                    </p>
+                    <div className="border-t border-gray-700 pt-6 mb-6">
+                      <div className="text-2xl font-bold text-accent mb-6">
+                        {service.price}
+                      </div>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={handleContact}
+                          className="flex-1 bg-[#25D366] text-white py-3 px-6 rounded-lg font-bold hover:bg-opacity-90 flex items-center justify-center gap-2"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                          تواصل معنا للطلب
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* المنتجات المقترحة */}
+          {suggested.length > 0 && (
+            <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl mb-8">
+              <h2 className="text-xl font-bold text-secondary mb-4">متوفر لدينا ايضا</h2>
+              <div
+                className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                {suggested.map((item) => (
+                  <div
+                    key={item.id}
+                    className="
+                      min-w-[160px] max-w-[180px]
+                      md:min-w-[220px] md:max-w-[260px]
+                      bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
+                    "
+                    onClick={() => navigate(`/product/${item.id}`)}
+                  >
+                    <img
+                      src={item.image_url || ''}
+                      alt={item.title}
+                      className="w-full h-24 md:h-40 object-cover rounded"
+                    />
+                    <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
+                    <div className="text-xs md:text-sm text-accent">{item.price}</div>
+                  </div>
+                ))}
+              </div>
+              <style>{`
+                .hide-scrollbar {
+                  scrollbar-width: none;
+                  -ms-overflow-style: none;
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                  display: none;
+                }
+                .auto-scroll-x {
+                  animation: scroll-x 30s linear infinite;
+                }
+                @keyframes scroll-x {
+                  0% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 0; }
+                  100% { scroll-behavior: smooth; scroll-snap-type: x mandatory; scroll-left: 9999px; }
+                }
+              `}</style>
+            </div>
+          )}
+          <div className="flex justify-center pb-8">
+            <button
+              onClick={() => navigate('/')}
+              className="text-secondary hover:text-accent px-4 py-2 rounded-lg border border-secondary hover:border-accent"
+            >
+              ← العودة للرئيسية
+            </button>
+          </div>
+          <footer className="bg-secondary text-primary text-center py-4">
+            جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
+          </footer>
+        </div>
+      </ErrorBoundary>
+    );
+  } catch (err) {
+    // fallback UI if something escapes ErrorBoundary (should not happen)
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-24">
+        <div className="text-xl text-red-500">حدث خطأ غير متوقع في عرض المنتج.</div>
       </div>
     );
   }
-
-  return (
-    <div
-      className="min-h-screen font-[Cairo]"
-      style={{
-        background: "linear-gradient(135deg, #232526 0%, #414345 100%)",
-        color: "#fff"
-      }}
-      dir="rtl"
-    >
-      {deleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">تأكيد الحذف</h2>
-            <p className="text-gray-600 mb-6">
-              {deleteModal.type === 'category'
-                ? 'هل أنت متأكد من حذف هذا القسم؟ سيتم حذف جميع المنتجات المرتبطة به.'
-                : deleteModal.type === 'banner'
-                ? 'هل أنت متأكد من حذف هذا البانر؟'
-                : 'هل أنت متأكد من حذف هذا المنتج؟'}
-            </p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setDeleteModal(null)}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleDeleteConfirmation}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-                disabled={isLoading}
-              >
-                تأكيد الحذف
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-black/60 backdrop-blur-sm shadow-lg sticky top-0 z-50 border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className={`text-2xl font-bold text-[${lightGold}]`}>لوحة التحكم</h1>
-          {isLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[${lightGold}]"></div>}
-          <button
-            onClick={handleLogout}
-            className="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 transition-colors font-semibold disabled:opacity-50"
-            disabled={isLoading}
-          >
-            تسجيل خروج
-          </button>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        {error && (
-          <div className="bg-red-800/60 border border-red-600 text-red-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
-            <strong className="font-bold block">خطأ!</strong>
-            <span className="block sm:inline mt-1">{error}</span>
-            <button onClick={() => setError(null)} className="absolute top-2 bottom-2 left-3 px-3 text-red-100 hover:text-white focus:outline-none" title="إغلاق الرسالة">
-              <X size={20}/>
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="bg-green-800/60 border border-green-600 text-green-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
-            <span className="block sm:inline">{successMsg}</span>
-            <button 
-              onClick={() => setSuccessMsg(null)} 
-              className="absolute top-2 bottom-2 left-3 px-3 text-green-100 hover:text-white focus:outline-none"
-              title="إغلاق الرسالة"
-            >
-              <X size={20}/>
-            </button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Side Tabs */}
-          <div className="space-y-2">
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
-                ${activeTab === 'products'
-                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
-                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
-                `}
-            >
-              <Package className="h-5 w-5" />
-              <span>إدارة المنتجات</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('store')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
-                ${activeTab === 'store'
-                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
-                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
-                `}
-            >
-              <Store className="h-5 w-5" />
-              <span>إعدادات المتجر</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('banners')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
-                ${activeTab === 'banners'
-                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
-                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
-                `}
-            >
-              <Image className="h-5 w-5" />
-              <span>البانرات</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('theme')}
-              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
-                ${activeTab === 'theme'
-                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
-                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
-                `}
-            >
-              <Palette className="h-5 w-5" />
-              <span>تخصيص المظهر</span>
-            </button>
-          </div>
-
-          {/* Main Content */}
-          <div className="md:col-span-3">
-            {/* --- Tab Header for all tabs --- */}
-            {(activeTab === 'banners' || activeTab === 'products' || activeTab === 'store' || activeTab === 'theme') && (
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-8 py-6 bg-gradient-to-r from-yellow-400/20 via-yellow-100/10 to-yellow-400/10 border-b border-yellow-400/20 mb-8 rounded-2xl">
-                <div>
-                  <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
-                    {activeTab === 'banners' && <Image className="w-7 h-7 text-yellow-400" />}
-                    {activeTab === 'products' && <Package className="w-7 h-7 text-yellow-400" />}
-                    {activeTab === 'store' && <Store className="w-7 h-7 text-yellow-400" />}
-                    {activeTab === 'theme' && <Palette className="w-7 h-7 text-yellow-400" />}
-                    {activeTab === 'banners' && 'إدارة البانرات'}
-                    {activeTab === 'products' && 'إدارة المنتجات'}
-                    {activeTab === 'store' && 'إعدادات المتجر'}
-                    {activeTab === 'theme' && 'تخصيص المظهر'}
-                  </h2>
-                  {activeTab === 'banners' && (
-                    <p className="text-gray-200 mt-1 text-sm">يمكنك إضافة بانر نصي أو صورة وتفعيل واحد فقط في نفس الوقت</p>
-                  )}
-                  {activeTab === 'products' && (
-                    <p className="text-gray-200 mt-1 text-sm">إدارة المنتجات والأقسام المرتبطة بها</p>
-                  )}
-                  {activeTab === 'store' && (
-                    <p className="text-gray-200 mt-1 text-sm">تعديل إعدادات المتجر والمعلومات العامة</p>
-                  )}
-                  {activeTab === 'theme' && (
-                    <p className="text-gray-200 mt-1 text-sm">تخصيص ألوان وخطوط وخلفية الموقع</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-4">
-                  {activeTab === 'banners' && (
-                    <>
-                      <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
-                        <Image className="w-4 h-4" /> {banners.length} بانر
-                      </span>
-                      <span className="inline-flex items-center gap-1 bg-green-400/20 text-green-300 px-3 py-1 rounded-full text-xs font-bold">
-                        {banners.filter(b => b.is_active).length} مفعل
-                      </span>
-                    </>
-                  )}
-                  {activeTab === 'products' && (
-                    <>
-                      <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
-                        <Package className="w-4 h-4" /> {services.length} منتج
-                      </span>
-                      <span className="inline-flex items-center gap-1 bg-blue-400/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold">
-                        <List className="w-4 h-4" /> {categories.length} قسم
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'theme' && (
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                <h2 className="text-xl font-bold mb-6 text-white">تخصيص المظهر</h2>
-                <form onSubmit={handleThemeSettingsSave} className="space-y-6 max-w-lg mx-auto">
-                  <div>
-                    <label className="block mb-1 text-gray-300 font-medium">اللون الأساسي</label>
-                    <input
-                      type="color"
-                      value={themeSettings.primaryColor}
-                      onChange={e => setThemeSettings(s => ({ ...s, primaryColor: e.target.value }))}
-                      className="w-16 h-10 border-none rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-gray-300 font-medium">اللون الثانوي</label>
-                    <input
-                      type="color"
-                      value={themeSettings.secondaryColor}
-                      onChange={e => setThemeSettings(s => ({ ...s, secondaryColor: e.target.value }))}
-                      className="w-16 h-10 border-none rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-gray-300 font-medium">خلفية الموقع</label>
-                    <div className="flex gap-4 mb-2">
-                      <label className="flex items-center gap-1">
-                        <input
-                          type="radio"
-                          name="backgroundType"
-                          value="solid"
-                          checked={themeSettings.backgroundType === 'solid'}
-                          onChange={() => setThemeSettings(s => ({
-                            ...s,
-                            backgroundType: 'solid',
-                            backgroundGradient: '',
-                          }))}
-                        />
-                        لون ثابت
-                      </label>
-                      <label className="flex items-center gap-1">
-                        <input
-                          type="radio"
-                          name="backgroundType"
-                          value="gradient"
-                          checked={themeSettings.backgroundType === 'gradient'}
-                          onChange={() => setThemeSettings(s => ({
-                            ...s,
-                            backgroundType: 'gradient',
-                            backgroundGradient: `linear-gradient(${s.gradientAngle}deg, ${s.gradientStartColor}, ${s.gradientEndColor})`,
-                          }))}
-                        />
-                        تدرج لوني
-                      </label>
-                    </div>
-                    {themeSettings.backgroundType === 'solid' && (
-                      <div>
-                        <input
-                          type="color"
-                          value={themeSettings.backgroundColor}
-                          onChange={e => setThemeSettings(s => ({
-                            ...s,
-                            backgroundColor: e.target.value,
-                            backgroundGradient: '',
-                          }))}
-                          className="w-16 h-10 border-none rounded"
-                        />
-                        <span className="ml-2 text-xs text-gray-400">اختر لون الخلفية الثابت</span>
-                      </div>
-                    )}
-                    {themeSettings.backgroundType === 'gradient' && (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs text-gray-400">البداية</label>
-                          <input
-                            type="color"
-                            value={themeSettings.gradientStartColor}
-                            onChange={e => setThemeSettings(s => {
-                              const gradient = `linear-gradient(${s.gradientAngle}deg, ${e.target.value}, ${s.gradientEndColor})`;
-                              return {
-                                ...s,
-                                gradientStartColor: e.target.value,
-                                backgroundGradient: gradient,
-                              };
-                            })}
-                            className="w-10 h-8 border-none rounded"
-                          />
-                          <label className="text-xs text-gray-400">النهاية</label>
-                          <input
-                            type="color"
-                            value={themeSettings.gradientEndColor}
-                            onChange={e => setThemeSettings(s => {
-                              const gradient = `linear-gradient(${s.gradientAngle}deg, ${s.gradientStartColor}, ${e.target.value})`;
-                              return {
-                                ...s,
-                                gradientEndColor: e.target.value,
-                                backgroundGradient: gradient,
-                              };
-                            })}
-                            className="w-10 h-8 border-none rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-400 mr-2">زاوية التدرج</label>
-                          <input
-                            type="number"
-                            value={themeSettings.gradientAngle}
-                            onChange={e => setThemeSettings(s => {
-                              const angle = parseInt(e.target.value, 10) || 0;
-                              const gradient = `linear-gradient(${angle}deg, ${s.gradientStartColor}, ${s.gradientEndColor})`;
-                              return {
-                                ...s,
-                                gradientAngle: angle,
-                                backgroundGradient: gradient,
-                              };
-                            })}
-                            className="w-20 p-1 rounded bg-black/30 text-white border border-white/10"
-                            min="0"
-                            max="360"
-                          />
-                        </div>
-                        <span className="text-xs text-gray-400">اختر ألوان وزاوية التدرج</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-gray-300 font-medium">الخط الرئيسي</label>
-                    <select
-                      value={themeSettings.fontFamily}
-                      onChange={e => setThemeSettings(s => ({ ...s, fontFamily: e.target.value }))}
-                      className="w-full p-2 rounded bg-black/30 text-white border border-white/10"
-                    >
-                      <option value="Cairo">Cairo</option>
-                      <option value="Tajawal">Tajawal</option>
-                      <option value="Arial">Arial</option>
-                      <option value="Tahoma">Tahoma</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      className="bg-[var(--primary-color,#34C759)] text-white px-6 py-2 rounded hover:bg-[var(--primary-color,#34C759)] transition-colors flex items-center gap-2 disabled:opacity-50"
-                      disabled={savingTheme}
-                    >
-                      <Save className="w-5 h-5" />
-                      حفظ إعدادات المظهر
-                    </button>
-                  </div>
-                </form>
-                <div className="mt-8">
-                  <h3 className="text-lg font-bold mb-2 text-gray-200">معاينة مباشرة</h3>
-                  <div
-                    className="rounded-lg p-6"
-                    style={{
-                      background:
-                        themeSettings.backgroundType === 'gradient'
-                          ? themeSettings.backgroundGradient
-                          : themeSettings.backgroundColor,
-                      color: themeSettings.primaryColor,
-                      fontFamily: themeSettings.fontFamily,
-                      border: `2px solid ${themeSettings.secondaryColor}`
-                    }}
-                  >
-                    <span style={{ color: themeSettings.primaryColor, fontWeight: 'bold' }}>عنوان رئيسي</span>
-                    <p style={{ color: themeSettings.secondaryColor }}>هذا مثال على نص ثانوي</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'store' && (
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
-                <div className="p-6 border-t border-white/10">
-                  <form onSubmit={handleStoreSettingsUpdate} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">اسم المتجر</label>
-                        <input
-                          type="text"
-                          value={storeSettings.store_name || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, store_name: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="اسم المتجر"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">وصف المتجر</label>
-                        <input
-                          type="text"
-                          value={storeSettings.store_description || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, store_description: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="وصف المتجر"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Logo Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">شعار المتجر</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleSettingsImageUpload(e, 'logo')}
-                            className="hidden"
-                            id="logo-upload"
-                          />
-                          <label
-                            htmlFor="logo-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
-                          >
-                            <Upload className="w-5 h-5 ml-2" />
-                            {storeSettings.logo_url ? 'تغيير الشعار' : 'رفع الشعار'}
-                          </label>
-                          {storeSettings.logo_url && (
-                            <img
-                              src={storeSettings.logo_url}
-                              alt="الشعار"
-                              className="mt-2 h-16 w-auto object-contain"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Favicon Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">أيقونة المتصفح</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleSettingsImageUpload(e, 'favicon')}
-                            className="hidden"
-                            id="favicon-upload"
-                          />
-                          <label
-                            htmlFor="favicon-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
-                          >
-                            <Upload className="w-5 h-5 ml-2" />
-                            {storeSettings.favicon_url ? 'تغيير الأيقونة' : 'رفع الأيقونة'}
-                          </label>
-                          {storeSettings.favicon_url && (
-                            <img
-                              src={storeSettings.favicon_url}
-                              alt="أيقونة المتصفح"
-                              className="mt-2 h-8 w-8 object-contain"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* OG Image Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">صورة المشاركة</label>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleSettingsImageUpload(e, 'og_image')}
-                            className="hidden"
-                            id="og-image-upload"
-                          />
-                          <label
-                            htmlFor="og-image-upload"
-                            className="w-full flex items-center justify-center px-4 py-2 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30"
-                          >
-                            <Upload className="w-5 h-5 ml-2" />
-                            {storeSettings.og_image_url ? 'تغيير الصورة' : 'رفع الصورة'}
-                          </label>
-                          {storeSettings.og_image_url && (
-                            <img
-                              src={storeSettings.og_image_url}
-                              alt="صورة المشاركة"
-                              className="mt-2 h-16 w-auto object-contain"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">عنوان الصفحة</label>
-                        <input
-                          type="text"
-                          value={storeSettings.meta_title || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, meta_title: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="عنوان الصفحة"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">وصف الصفحة</label>
-                        <input
-                          type="text"
-                          value={storeSettings.meta_description || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, meta_description: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="وصف الصفحة"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">الكلمات المفتاحية (مفصولة بفواصل)</label>
-                      <input
-                        type="text"
-                        value={storeSettings.keywords?.join(', ') || ''}
-                        onChange={(e) => setStoreSettings({ ...storeSettings, keywords: e.target.value.split(',').map(k => k.trim()) })}
-                        className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                        placeholder="كلمة1, كلمة2, كلمة3"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">رابط فيسبوك</label>
-                        <input
-                          type="url"
-                          value={storeSettings.facebook_url || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, facebook_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="https://facebook.com/..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">رابط انستغرام</label>
-                        <input
-                          type="url"
-                          value={storeSettings.instagram_url || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, instagram_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="https://instagram.com/..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">رابط تويتر</label>
-                        <input
-                          type="url"
-                          value={storeSettings.twitter_url || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, twitter_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="https://twitter.com/..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">رابط سناب شات</label>
-                        <input
-                          type="url"
-                          value={storeSettings.snapchat_url || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, snapchat_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="https://snapchat.com/..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">رابط تيك توك</label>
-                        <input
-                          type="url"
-                          value={storeSettings.tiktok_url || ''}
-                          onChange={(e) => setStoreSettings({ ...storeSettings, tiktok_url: e.target.value })}
-                          className="w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10"
-                          placeholder="https://tiktok.com/..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="bg-[#34C759] text-white px-4 py-2.5 rounded hover:bg-[#34C759] transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759]"
-                      >
-                        <Save className="w-5 h-5" />
-                        حفظ الاعدادات
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* --- Banners Tab --- */}
-            {activeTab === 'banners' && (
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
-                <div className="p-8">
-                  {/* Sub Tabs for banners */}
-                  <div className="flex mb-8 gap-2">
-                    <button
-                      onClick={() => setBannersSubTab('text')}
-                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
-                        bannersSubTab === 'text'
-                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
-                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
-                      }`}
-                    >
-                      بانرات نصية
-                    </button>
-                    <button
-                      onClick={() => setBannersSubTab('image')}
-                      className={`flex-1 py-2 rounded-t-lg font-bold ${
-                        bannersSubTab === 'image'
-                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
-                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
-                      }`}
-                    >
-                      بانرات صور
-                    </button>
-                  </div>
-                  {/* Banner Form */}
-                  <form onSubmit={editingBanner ? handleUpdateBanner : handleAddBanner} className="mb-10 space-y-4">
-                    {/* نوع البانر يتم التحكم فيه من التاب الفرعي */}
-                    <input type="hidden" value={bannersSubTab} />
-                    {/* اجعل نوع البانر حسب التاب الفرعي */}
-                    {bannersSubTab === 'text' && (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="عنوان البانر"
-                          value={newBanner.type === 'text' ? newBanner.title : ''}
-                          onChange={(e) => setNewBanner({ ...newBanner, type: 'text', title: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                          required
-                          disabled={isLoading}
-                        />
-                        <textarea
-                          placeholder="وصف البانر"
-                          value={newBanner.type === 'text' ? newBanner.description : ''}
-                          onChange={(e) => setNewBanner({ ...newBanner, type: 'text', description: e.target.value })}
-                          rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                          disabled={isLoading}
-                        />
-                      </>
-                    )}
-                    {bannersSubTab === 'image' && (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => { setNewBanner({ ...newBanner, type: 'image' }); handleImageUpload(e, 'banner'); }}
-                          className="hidden"
-                          id="banner-image-upload"
-                          disabled={uploadingBannerImage || isLoading}
-                        />
-                        <label
-                          htmlFor="banner-image-upload"
-                          className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 ${uploadingBannerImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <Upload className={`w-5 h-5 ml-2 text-[#34C759] ${uploadingBannerImage ? 'animate-pulse' : ''}`} />
-                          {uploadingBannerImage ? 'جاري رفع الصورة...' : (newBanner.image_url ? 'تغيير الصورة' : 'اختر صورة للبانر')}
-                        </label>
-                        {newBanner.type === 'image' && newBanner.image_url && !uploadingBannerImage && (
-                          <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
-                            <img
-                              src={newBanner.image_url}
-                              alt="معاينة"
-                              className="w-16 h-16 object-cover rounded border border-gray-700"
-                            />
-                            <span className="text-gray-400 text-xs">صورة البانر الحالية/الجديدة</span>
-                            <button type="button" onClick={() => setNewBanner({...newBanner, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
-                              <X size={16}/>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={newBanner.is_active}
-                        onChange={(e) => setNewBanner({ ...newBanner, is_active: e.target.checked })}
-                        className="rounded"
-                      />
-                      تفعيل هذا البانر
-                    </label>
-                    <div className="flex gap-3">
-                      <button
-                        type="submit"
-                        className={`flex-grow bg-[#34C759] text-white py-2.5 px-4 rounded hover:bg-[#34C759] transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[#34C759] disabled:opacity-50 disabled:cursor-not-allowed`}
-                        disabled={isLoading}
-                      >
-                        {editingBanner ? (
-                          <> <Save size={20} /> حفظ التعديلات </>
-                        ) : (
-                          <> <Plus size={20} /> إضافة بانر </>
-                        )}
-                      </button>
-                      {editingBanner && (
-                        <button
-                          type="button"
-                          onClick={handleCancelEditBanner}
-                          className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
-                          disabled={isLoading}
-                        >
-                          <X size={20} /> إلغاء
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                  {/* Banner List */}
-                  <h3 className="text-lg font-semibold mb-6 text-white border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <List className="w-5 h-5 text-yellow-400" />
-                    البانرات الحالية
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                    {!isLoading && banners.filter(b => b.type === bannersSubTab).length === 0 && (
-                      <div className="col-span-full text-gray-400 text-center mt-4">لا توجد بانرات لعرضها.</div>
-                    )}
-                    {isLoading && banners.filter(b => b.type === bannersSubTab).length === 0 && (
-                      <div className="col-span-full text-gray-400 text-center mt-4">جاري تحميل البانرات...</div>
-                    )}
-                    {banners.filter(b => b.type === bannersSubTab).map((banner) => (
-                      <div
-                        key={banner.id}
-                        className={`
-                          relative group border border-gray-700/50 rounded-xl bg-gradient-to-br from-gray-800/60 to-gray-900/40 shadow-lg transition-all duration-300 overflow-hidden
-                          ${editingBanner === banner.id ? `ring-2 ring-[#34C759] shadow-[0_0_16px_2px_#34C75933]` : 'hover:border-yellow-400/60 hover:shadow-yellow-400/10'}
-                        `}
-                      >
-                        {/* Banner type & status */}
-                        <div className="absolute top-3 right-3 flex gap-2 z-10">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${banner.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>
-                            {banner.is_active ? 'مفعل' : 'غير مفعل'}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300`}>
-                            {banner.type === 'text' ? 'نصي' : 'صورة'}
-                          </span>
-                        </div>
-                        {/* Banner content */}
-                        <div className="p-0 flex flex-col h-full">
-                          {/* Banner image or icon */}
-                          <div className="relative w-full h-40 flex items-center justify-center bg-gradient-to-tr from-yellow-100/10 to-black/10 rounded-t-xl overflow-hidden">
-                            {banner.type === 'image' && banner.image_url ? (
-                              <img
-                                src={banner.image_url}
-                                alt={banner.title || 'صورة البانر'}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                            ) : (
-                              <div className="flex flex-col items-center justify-center w-full h-full">
-                                <Image className="w-12 h-12 text-yellow-400 opacity-60 mb-2" />
-                                <span className="text-yellow-200 text-lg font-bold">{banner.title || 'بانر نصي'}</span>
-                              </div>
-                            )}
-                            {banner.is_active && (
-                              <span className="absolute top-2 left-2 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded-full shadow font-bold z-10">
-                                مفعل
-                              </span>
-                            )}
-                          </div>
-                          {/* Banner text content */}
-                          <div className="flex-1 flex flex-col justify-between p-5">
-                            <div>
-                              <h4 className="font-bold text-white text-lg truncate" title={banner.title || ''}>
-                                {banner.title || 'بدون عنوان'}
-                              </h4>
-                              {banner.description && (
-                                <p className="text-gray-300 text-sm mt-1 line-clamp-2">{banner.description}</p>
-                              )}
-                            </div>
-                            <div className="flex justify-end gap-2 mt-4">
-                              <button
-                                onClick={() => !isLoading && handleEditBanner(banner)}
-                                title="تعديل البانر"
-                                className={`text-blue-400 hover:text-blue-300 transition-colors p-1 rounded-full border border-blue-400/30 bg-blue-900/10 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                disabled={editingBanner === banner.id || isLoading}
-                              >
-                                <Edit size={18} />
-                              </button>
-                              <button
-                                onClick={() => !isLoading && handleDeleteBanner(banner.id)}
-                                title="حذف البانر"
-                                className="text-red-500 hover:text-red-400 transition-colors p-1 rounded-full border border-red-400/30 bg-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isLoading}
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'products' && (
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-white/10 overflow-hidden">
-                <div className="p-6 border-t border-white/10">
-                  {/* تبويبات فرعية */}
-                  <div className="flex mb-6 gap-2">
-                    <button
-                      onClick={() => setProductsSubTab('services')}
-                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
-                        productsSubTab === 'services'
-                          ? 'bg-[#34C759] text-white shadow-lg border-b-4 border-[#34C759]'
-                          : 'bg-black/20 text-white hover:bg-[#34C759]/10 hover:text-[#34C759]'
-                      }`}
-                    >
-                      المنتجات
-                    </button>
-                    <button
-                      onClick={() => setProductsSubTab('categories')}
-                      className={`flex-1 py-2 rounded-t-lg font-bold transition-colors ${
-                        productsSubTab === 'categories'
-                          ? 'bg-yellow-400 text-black shadow-lg border-b-4 border-yellow-600'
-                          : 'bg-black/20 text-yellow-200 hover:bg-yellow-500/10 hover:text-yellow-400'
-                      }`}
-                    >
-                      الأقسام
-                    </button>
-                  </div>
-
-                  {/* المنتجات */}
-                  {productsSubTab === 'services' && (
-                    <>
-                      <form onSubmit={editingService ? handleUpdateService : handleAddService} className="mb-8 space-y-4" id="service-form">
-                        {/* عنوان المنتج */}
-                        <input
-                          type="text"
-                          placeholder="عنوان المنتج"
-                          value={newService.title}
-                          onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
-                          required
-                          disabled={isLoading}
-                        />
-                        {/* الوصف */}
-                        <textarea
-                          placeholder="وصف المنتج (اختياري)"
-                          value={newService.description}
-                          onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                          rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
-                          disabled={isLoading}
-                        />
-                        {/* رفع الصورة */}
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                            id="image-upload"
-                            disabled={uploadingImage || isLoading}
-                          />
-                          <label
-                            htmlFor="image-upload"
-                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
-                            {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
-                          </label>
-                          {newService.image_url && !uploadingImage && (
-                            <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
-                              <img
-                                src={newService.image_url}
-                                alt="معاينة"
-                                className="w-16 h-16 object-cover rounded border border-gray-700"
-                              />
-                              <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
-                              <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
-                                <X size={16}/>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {/* اختيار القسم */}
-                        <select
-                          value={selectedCategory}
-                          onChange={(e) => setSelectedCategory(e.target.value)}
-                          className={`w-full p-3 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 appearance-none disabled:opacity-70 disabled:cursor-not-allowed`}
-                          required
-                          disabled={isLoading || categories.length === 0}
-                        >
-                          <option value="" disabled className="text-gray-500">-- اختر القسم --</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id} className="bg-gray-800 text-white">
-                              {category.name}
-                            </option>
-                          ))}
-                          {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
-                        </select>
-                        {/* السعر */}
-                        <input
-                          type="text"
-                          placeholder="السعر (مثال: 150 ريال أو مجاني)"
-                          value={newService.price}
-                          onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
-                          disabled={isLoading}
-                        />
-                        {/* رفع الصور الإضافية */}
-                        <div>
-                          <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج</label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleGalleryUpload}
-                            className="w-full p-2 rounded bg-black/20 text-white border border-white/10"
-                            disabled={uploadingImage || isLoading}
-                          />
-                          {/* عرض الصور المصغرة مع خيار تحديد الرئيسية والحذف */}
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {newService.gallery && newService.gallery.map((img, idx) => (
-                              <div key={img} className="relative">
-                                <img
-                                  src={img}
-                                  alt={`صورة إضافية ${idx + 1}`}
-                                  className={`w-16 h-16 object-cover rounded border-2 ${newService.image_url === img ? 'border-yellow-400' : 'border-white/20'}`}
-                                  onClick={() => setNewService(prev => {
-                                    // إذا اختار المستخدم صورة من المعرض كصورة رئيسية، أزلها من المعرض
-                                    const newGallery = (prev.gallery || []).filter(g => g !== img);
-                                    return { ...prev, image_url: img, gallery: newGallery };
-                                  })}
-                                  style={{ cursor: 'pointer' }}
-                                  title={newService.image_url === img ? 'الصورة الرئيسية' : 'تعيين كصورة رئيسية'}
-                                />
-                                <button
-                                  type="button"
-                                  className="absolute top-0 left-0 bg-black/60 text-white rounded-full p-1 text-xs"
-                                  onClick={() => setNewService(prev => ({
-                                    ...prev,
-                                    gallery: prev.gallery.filter((g) => g !== img),
-                                    image_url: prev.image_url === img ? '' : prev.image_url,
-                                  }))}
-                                  title="حذف الصورة"
-                                >×</button>
-                                {newService.image_url === img && (
-                                  <span className="absolute bottom-0 right-0 bg-yellow-400 text-black text-xs px-1 rounded-tr rounded-bl">رئيسية</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        {/* زر الإضافة/التعديل */}
-                        <div className="flex gap-3">
-                          <button
-                            type="submit"
-                            className={`flex-grow bg-white text-black py-2.5 px-4 rounded font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 border border-yellow-400 transition-colors flex items-center justify-center gap-2
-                        ${isLoading || (editingService ? false : !selectedCategory)
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:bg-yellow-400 hover:text-black'}
-                        `}
-                            disabled={isLoading || (editingService ? false : !selectedCategory)}
-                          >
-                            {editingService ? (
-                              <> <Save size={20} /> حفظ التعديلات </>
-                            ) : (
-                              <> <Plus size={20} /> إضافة منتج </>
-                            )}
-                          </button>
-                          {editingService && (
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-70 disabled:bg-gray-500 disabled:text-white disabled:cursor-not-allowed"
-                              disabled={isLoading}
-                            >
-                              <X size={20} /> إلغاء
-                            </button>
-                          )}
-                        </div>
-                      </form>
-
-                      <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">المنتجات الحالية</h3>
-                      <div className="space-y-3">
-                        {!isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد منتجات لعرضها.</p>}
-                        {isLoading && services.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل المنتجات...</p>}
-                        {services.map((service) => (
-                          <div key={service.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingService === service.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
-                            <div className="flex justify-between items-start gap-4">
-                              {/* صورة المنتج أولاً */}
-                              {service.image_url && (
-                                <img
-                                  src={service.image_url}
-                                  alt={service.title}
-                                  className="w-16 h-16 object-cover rounded border border-gray-700 flex-shrink-0"
-                                />
-                              )}
-                              <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="text-xs text-gray-400 mb-1 font-medium truncate" title={service.category?.name || 'قسم غير محدد'}>
-                                  {service.category?.name || 'قسم غير محدد'}
-                                </div>
-                                <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
-                                {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
-                                {service.price && <p className={`font-semibold mt-2 text-[${lightGold}] text-lg`}>{service.price}</p>}
-                              </div>
-                              <div className="flex gap-3 flex-shrink-0">
-                                <button
-                                  onClick={() => !isLoading && handleEditService(service)}
-                                  title="تعديل المنتج"
-                                  className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                  disabled={editingService === service.id || isLoading}
-                                >
-                                  <Edit size={18} />
-                                </button>
-                                <button
-                                  onClick={() => !isLoading && handleDeleteService(service.id)}
-                                  title="حذف المنتج"
-                                  className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={isLoading}
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {/* الأقسام */}
-                  {productsSubTab === 'categories' && (
-                    <>
-                      <form onSubmit={editingCategory ? handleUpdateCategory : handleAddCategory} className="mb-8 space-y-4" id="category-form">
-                        <input
-                          type="text"
-                          placeholder="اسم القسم"
-                          value={newCategory.name}
-                          onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                          required
-                          disabled={isLoading}
-                        />
-                        <textarea
-                          placeholder="وصف القسم (اختياري)"
-                          value={newCategory.description}
-                          onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                          rows={3}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-50`}
-                          disabled={isLoading}
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            type="submit"
-                            className={`flex-grow bg-[${lightGold}] text-black py-2.5 px-4 rounded hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] disabled:opacity-50 disabled:cursor-not-allowed`}
-                            disabled={isLoading}
-                          >
-                            {editingCategory ? (
-                              <> <Save size={20} /> حفظ التعديلات </>
-                            ) : (
-                              <> <Plus size={20} /> إضافة قسم </>
-                            )}
-                          </button>
-                          {editingCategory && (
-                            <button
-                              type="button"
-                              onClick={handleCancelEditCategory}
-                              className="bg-gray-600 text-white px-4 py-2.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-gray-500 disabled:opacity-50"
-                              disabled={isLoading}
-                            >
-                              <X size={20} /> إلغاء
-                            </button>
-                          )}
-                        </div>
-                      </form>
-
-                      <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">الأقسام الحالية</h3>
-                      <div className="space-y-3">
-                        {!isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد أقسام لعرضها.</p>}
-                        {isLoading && categories.length === 0 && <p className="text-gray-400 text-center mt-4">جاري تحميل الأقسام...</p>}
-                        {categories.map((category) => (
-                          <div key={category.id} className={`border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 transition-all duration-300 ${editingCategory === category.id ? `ring-2 ring-[${lightGold}] shadow-lg shadow-[${lightGold}]/20` : 'hover:border-gray-600 hover:bg-gray-800/60'}`}>
-                            <div className="flex justify-between items-start gap-4">
-                              <div className="flex-1 overflow-hidden">
-                                <h4 className="font-bold text-white text-lg truncate" title={category.name}>{category.name}</h4>
-                                {category.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>}
-                              </div>
-                              <div className="flex gap-3 flex-shrink-0">
-                                <button
-                                  onClick={() => !isLoading && handleEditCategory(category)}
-                                  title="تعديل القسم"
-                                  className={`text-blue-400 hover:text-blue-300 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                  disabled={editingCategory === category.id || isLoading}
-                                >
-                                  <Edit size={18} />
-                                </button>
-                                <button
-                                  onClick={() => !isLoading && handleDeleteCategory(category.id)}
-                                  title="حذف القسم"
-                                  className="text-red-500 hover:text-red-400 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={isLoading}
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      {/* فوتر وزر العودة للصفحة الرئيسية بلون أبيض شفاف */}
-      <footer className="w-full flex justify-center py-8 mt-10">
-        <button
-          onClick={() => navigate('/')}
-          className="bg-white/70 hover:bg-white text-black font-bold px-8 py-3 rounded-full shadow-lg transition-colors border-2 border-yellow-600"
-        >
-          العودة للصفحة الرئيسية
-        </button>
-      </footer>
-    </div>
-  );
 }
