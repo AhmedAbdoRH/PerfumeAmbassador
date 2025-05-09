@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
 import { MessageCircle } from 'lucide-react';
+import ServiceCard from '../components/ServiceCard';
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -10,6 +11,7 @@ export default function ProductDetails() {
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suggestedServices, setSuggestedServices] = useState<Service[]>([]);
   const [suggested, setSuggested] = useState<Service[]>([]);
 
   // أضف hook لتتبع الصورة الحالية لكل منتج مقترح
@@ -21,6 +23,12 @@ export default function ProductDetails() {
       fetchSuggested();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (service?.category_id && service?.id) {
+      fetchSuggestedServices(service.category_id, service.id);
+    }
+  }, [service]);
 
   const fetchService = async (serviceId: string) => {
     try {
@@ -44,6 +52,17 @@ export default function ProductDetails() {
     }
   };
 
+  const fetchSuggestedServices = async (categoryId: string, excludeId: number) => {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('category_id', categoryId)
+      .neq('id', excludeId)
+      .limit(4);
+    if (!error && data) setSuggestedServices(data);
+    else setSuggestedServices([]);
+  };
+
   // جلب منتجات أخرى (بدون شرط القسم)
   const fetchSuggested = async () => {
     const { data } = await supabase
@@ -59,6 +78,9 @@ export default function ProductDetails() {
     const productUrl = window.location.href;
     const message = `استفسار عن المنتج: ${service.title}
 رابط المنتج: ${productUrl}`;
+    // إضافة باراميترات Open Graph للصورة (للاستخدام في واتساب)
+    const ogImage = service.image_url || '';
+    // مشاركة عبر واتساب (واتساب نفسه سيجلب الصورة المصغرة تلقائياً من og:image إذا كانت موجودة في صفحة المنتج)
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -168,6 +190,24 @@ export default function ProductDetails() {
             </div>
           </div>
         </div>
+        {/* Suggested products section */}
+        {suggestedServices.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6 text-accent text-center">منتجات مقترحة من نفس القسم</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {suggestedServices.map((s) => (
+                <ServiceCard
+                  key={s.id}
+                  id={s.id}
+                  title={s.title}
+                  description={s.description || ''}
+                  imageUrl={s.image_url || ''}
+                  price={s.price || ''}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* المنتجات المقترحة */}
