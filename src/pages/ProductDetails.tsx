@@ -111,7 +111,7 @@ export default function ProductDetails() {
     setPrevOpacity(1);
     const timer = setTimeout(() => {
       setPrevOpacity(0);
-    }, 500); // delay 50ms to trigger transition
+    }, 50); // delay 50ms to trigger transition
     return () => clearTimeout(timer);
   }, [currentImage]);
 
