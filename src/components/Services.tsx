@@ -99,7 +99,7 @@ export default function Services() {
             onClick={() => setSelectedCategory(null)}
             className={`p-4 rounded-xl transition-all duration-300 ${
               !selectedCategory
-                ? `bg-white/5 text-white font-bold shadow-md`
+                ? `bg-[var(--color-secondary,#34C759)] text-black font-bold shadow-md`
                 : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
             }`}
           >
@@ -111,7 +111,7 @@ export default function Services() {
               onClick={() => setSelectedCategory(category.id)}
               className={`p-4 rounded-xl transition-all duration-300 ${
                 category.id === selectedCategory
-                  ? `bg-white/5 text-white font-bold shadow-md`
+                  ? `bg-[var(--color-secondary,#34C759)] text-black font-bold shadow-md`
                   : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
               }`}
             >

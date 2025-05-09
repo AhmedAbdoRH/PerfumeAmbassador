@@ -1,92 +1,141 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { MessageCircle, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import ServiceCard from './ServiceCard';
+import { supabase } from '../lib/supabase';
+import type { Service, Category } from '../types/database';
 
-interface ProductCardProps {
-  title: string;
-  description: string;
-  imageUrl: string;
-  price: string;
-  id: string | number;
-}
+const lightGold = '#FFD700';
+const brownDark = '#3d2c1d';
+const accentColor = '#d99323'; // New accent color for selected categories
 
-// Define the light gold color using the hex code from the Hero component
-const lightGold = '#FFD700'; // This is standard gold color
+export default function Services() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default function ProductCard({ title, description, imageUrl, price, id }: ProductCardProps) {
-  /**
-   * Handles the click event for the "Contact Now" button.
-   * Prevents the default link behavior and opens a WhatsApp chat
-   * with a pre-filled message including product details.
-   * @param e - The mouse event.
-   */
-  const handleContactClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent the default link behavior
-    // Construct the URL for the specific product page
-    const productUrl = `${window.location.origin}/product/${id}`;;
-    // Create the pre-filled message for WhatsApp
-    const message = `استفسار عن المنتج: ${title}
-رابط المنتج: ${productUrl}`;
-    // Open the WhatsApp chat link in a new tab
-    window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
+  useEffect(() => {
+    fetchServices();
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
+  const fetchServices = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('services')
+        .select(`
+          *,
+          category:categories(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredServices = selectedCategory
+    ? services.filter(service => service.category_id === selectedCategory)
+    : services;
+
+  if (isLoading) {
+    return (
+      <div className={`py-16 bg-gradient-to-br from-[${brownDark}] to-black`}>
+        <div className="container mx-auto px-4 text-center text-secondary">
+          جاري تحميل العطور...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`py-16 bg-gradient-to-br from-[${brownDark}] to-black`}>
+        <div className="container mx-auto px-4 text-center text-red-600">
+          حدث خطأ أثناء تحميل العطور
+        </div>
+      </div>
+    );
+  }
+
   return (
-    // Main container for the product card.
-    // Uses secondary color with transparency for background and border.
-    // Applies backdrop blur for a glassmorphism effect.
-    // Includes transition for hover effects (scale and background change).
-    <div className="group relative bg-secondary/5 backdrop-blur-md rounded-xl border border-secondary/20 overflow-hidden transition-all duration-300 hover:scale-105 hover:bg-secondary/10">
-      {/* Link wraps the card content, navigating to the product details page */}
-      <Link to={`/product/${id}`}>
-        <div className="relative aspect-[4/3] w-full">
-          {/* Product image */}
-          <img
-            src={imageUrl}
-            alt={title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          {/* Overlay gradient for hover effect */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </div>
-        {/* Card content area */}
-        <div className="p-6">
-          {/* Product title with Sparkles icon */}
-          {/* Sparkles icon color is set using the light gold hex code */}
-          <h3 className="text-xl font-bold mb-2 text-secondary flex items-center gap-2">
-            {title}
-            {/* Apply light gold text color using arbitrary value syntax */}
-            <Sparkles className={`h-4 w-4 text-[${lightGold}]`} />
-          </h3>
-          {/* Product description */}
-          {/* Text color is secondary with 70% opacity */}
-          {/* line-clamp-2 limits the description to two lines */}
-          <p className="text-secondary/70 mb-4 line-clamp-2">{description}</p>
-          {/* Price and Contact button container */}
-          <div className="flex justify-between items-center">
-            {/* Product price */}
-            {/* Price text color is set using the light gold hex code */}
-            {/* Apply light gold text color using arbitrary value syntax */}
-            <span className={`font-bold text-lg text-[${lightGold}]`}>{price}</span>
-            {/* "Contact Now" button */}
-            {/* Background color is light gold with 80% opacity using arbitrary value */}
-            {/* On hover, background changes to a slightly darker gold (yellow-500), matching Hero component */}
-            {/* Text color is secondary */}
-            {/* Includes MessageCircle icon and text */}
+    <section className={`py-16 bg-gradient-to-br from-[${brownDark}] to-black`} id="products">
+      <div className="container mx-auto px-4
+                   bg-white/5
+                   backdrop-blur-xl
+                   rounded-2xl
+                   p-8
+                   border border-white/10
+                   shadow-2xl shadow-black/40">
+        <h2 className={`text-3xl font-bold text-center mb-12 text-[${lightGold}]`}>
+          تشكيلة العطور
+        </h2>
+        <div className="w-full h-1 bg-[${lightGold}] mb-8"></div>
+
+        {/* Category Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`p-4 rounded-xl transition-all duration-300 ${
+              !selectedCategory
+                ? `bg-[var(--color-secondary,#34C759)] text-black font-bold shadow-md`
+                : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
+            }`}
+          >
+            جميع العطور
+          </button>
+          {categories.map((category) => (
             <button
-              onClick={handleContactClick}
-              // Apply light gold background with opacity using arbitrary value
-              // Use yellow-500 for hover, matching the Hero component's button hover
-              className={`bg-[${lightGold}]/80 hover:bg-yellow-500
-                          text-secondary
-                          px-4 py-2 rounded-lg transition-colors duration-300 flex items-center gap-2 backdrop-blur-sm`}
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`p-4 rounded-xl transition-all duration-300 ${
+                category.id === selectedCategory
+                  ? `bg-[var(--color-secondary,#34C759)] text-black font-bold shadow-md`
+                  : 'bg-black/20 text-white hover:bg-black/30 hover:shadow-md'
+              }`}
             >
-              <MessageCircle className="h-5 w-5" /> {/* Message icon */}
-              اطلب الآن {/* Button text */}
+              <h3 className="text-lg font-semibold mb-1">{category.name}</h3>
+              {category.description && (
+                <p className="text-sm opacity-80">{category.description}</p>
+              )}
             </button>
-          </div>
+          ))}
         </div>
-      </Link>
-    </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredServices.map((service) => (
+            <ServiceCard
+              key={service.id}
+              id={service.id}
+              title={service.title}
+              description={service.description || ''}
+              imageUrl={service.image_url || ''}
+              price={service.price || ''}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
