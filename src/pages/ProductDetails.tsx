@@ -12,6 +12,9 @@ export default function ProductDetails() {
   const [error, setError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<Service[]>([]);
 
+  // أضف hook لتتبع الصورة الحالية لكل منتج مقترح
+  const [suggestedImageIndexes, setSuggestedImageIndexes] = useState<{ [id: string]: number }>({});
+
   useEffect(() => {
     if (id) {
       fetchService(id);
@@ -58,6 +61,33 @@ export default function ProductDetails() {
 رابط المنتج: ${productUrl}`;
     window.open(`https://wa.me/201027381559?text=${encodeURIComponent(message)}`, '_blank');
   };
+
+  // التقليب التلقائي للصور
+  useEffect(() => {
+    if (!suggested.length) return;
+
+    const interval = setInterval(() => {
+      setSuggestedImageIndexes((prev) => {
+        const next: { [id: string]: number } = {};
+        suggested.forEach((item) => {
+          // إذا كان لدى المنتج أكثر من صورة
+          let images: string[] = [];
+          if (Array.isArray((item as any).image_urls)) {
+            images = (item as any).image_urls;
+          }
+          if (images.length > 1) {
+            const current = prev[item.id] || 0;
+            next[item.id] = (current + 1) % images.length;
+          } else {
+            next[item.id] = 0;
+          }
+        });
+        return next;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [suggested]);
 
   // Extracted background styles for reuse
   const backgroundStyles = {
@@ -148,25 +178,38 @@ export default function ProductDetails() {
             className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar auto-scroll-x"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {suggested.map((item) => (
-              <div
-                key={item.id}
-                className="
-                  min-w-[160px] max-w-[180px]
-                  md:min-w-[220px] md:max-w-[260px]
-                  bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
-                "
-                onClick={() => navigate(`/product/${item.id}`)}
-              >
-                <img
-                  src={item.image_url || ''}
-                  alt={item.title}
-                  className="w-full h-24 md:h-40 object-cover rounded"
-                />
-                <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
-                <div className="text-xs md:text-sm text-accent">{item.price}</div>
-              </div>
-            ))}
+            {suggested.map((item) => {
+              // دعم الصور المتعددة
+              let images: string[] = [];
+              if (Array.isArray((item as any).image_urls)) {
+                images = (item as any).image_urls;
+              }
+              const currentIndex = suggestedImageIndexes[item.id] || 0;
+              const imageUrl =
+                images.length > 0
+                  ? images[currentIndex]
+                  : item.image_url || '';
+
+              return (
+                <div
+                  key={item.id}
+                  className="
+                    min-w-[160px] max-w-[180px]
+                    md:min-w-[220px] md:max-w-[260px]
+                    bg-white/10 rounded-lg shadow p-2 flex-shrink-0 cursor-pointer hover:scale-105 transition
+                  "
+                  onClick={() => navigate(`/product/${item.id}`)}
+                >
+                  <img
+                    src={imageUrl}
+                    alt={item.title}
+                    className="w-full h-24 md:h-40 object-cover rounded"
+                  />
+                  <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
+                  <div className="text-xs md:text-sm text-accent">{item.price}</div>
+                </div>
+              );
+            })}
           </div>
           {/* إضافة ستايل لإخفاء الشريط وتفعيل التمرير التلقائي */}
           <style>{`
