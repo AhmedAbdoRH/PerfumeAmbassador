@@ -111,7 +111,7 @@ export default function ProductDetails() {
     setPrevOpacity(1);
     const timer = setTimeout(() => {
       setPrevOpacity(0);
-    }, 50); // delay 50ms to trigger transition
+    }, 500); // delay 50ms to trigger transition
     return () => clearTimeout(timer);
   }, [currentImage]);
 
@@ -126,7 +126,7 @@ export default function ProductDetails() {
       setCurrentTransform('translateX(0)');
       // تنزلق الصورة السابقة للخارج إلى اليمين
       setPrevTransform('translateX(100%)');
-    }, 50);
+    }, 500);
     return () => clearTimeout(timer);
   }, [currentImage]);
 
