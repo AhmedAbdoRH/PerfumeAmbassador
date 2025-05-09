@@ -29,6 +29,8 @@ export default function ProductDetails() {
 
   // استخدم مؤشر منفصل للصورة السابقة
   const [prevImageIndexState, setPrevImageIndexState] = useState<number | null>(null);
+  // تحكم في حالة الانتقال (لضمان عدم تكرار الترانزيشن أو تعارضها)
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -130,18 +132,29 @@ export default function ProductDetails() {
 
   // انتقال الصور: الصورة الجديدة تبدأ من اليمين وتدخل، والصورة السابقة تخرج لليسار
   useEffect(() => {
+    // إعدادات الانتقال
+    const DURATION = 1800; // مدة الانتقال الفعلي (ms)
+    const DELAY = 0; // لا حاجة لتأخير إضافي
+
+    // ابدأ الانتقال فقط إذا لم يكن هناك انتقال جارٍ
+    setIsTransitioning(true);
     setCurrentTransform('translateX(100%)'); // الصورة الجديدة تبدأ خارج الشاشة يميناً
     setPrevTransform('translateX(0)');      // الصورة السابقة في مكانها
-    const timer = setTimeout(() => {
+
+    // استخدم requestAnimationFrame لضمان تطبيق الترانزيشن بعد إعادة الرسم
+    let raf = requestAnimationFrame(() => {
       setCurrentTransform('translateX(0)');     // الصورة الجديدة تدخل مكانها
       setPrevTransform('translateX(-100%)');    // الصورة السابقة تخرج يساراً
-    }, 50);
+    });
+
     // بعد انتهاء الانتقال، احذف الصورة السابقة من العرض
     const cleanup = setTimeout(() => {
       setPrevImageIndexState(null);
-    }, 3500);
+      setIsTransitioning(false);
+    }, DURATION);
+
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(raf);
       clearTimeout(cleanup);
     };
   }, [currentImage]);
@@ -189,15 +202,31 @@ export default function ProductDetails() {
                     <img
                       src={images[prevImageIndexState]}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out"
-                      style={{ transform: prevTransform, zIndex: 10 }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{
+                        transform: prevTransform,
+                        zIndex: 10,
+                        transition: isTransitioning
+                          ? 'transform 1800ms cubic-bezier(.4,0,.2,1)'
+                          : 'none',
+                        willChange: 'transform',
+                      }}
+                      draggable={false}
                     />
                   )}
                   <img
                     src={images[currentImage] || ''}
                     alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-3500 ease-in-out"
-                    style={{ transform: currentTransform, zIndex: 5 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{
+                      transform: currentTransform,
+                      zIndex: 5,
+                      transition: isTransitioning
+                        ? 'transform 1800ms cubic-bezier(.4,0,.2,1)'
+                        : 'none',
+                      willChange: 'transform',
+                    }}
+                    draggable={false}
                   />
                   {images.length > 1 && (
                     <>
