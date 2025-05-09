@@ -41,9 +41,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     title: '',
     description: '',
     image_url: '',
-    images_urls: [], // روابط صور متعددة
     price: '',
-    category_id: ''
+    category_id: '',
+    gallery: [] as string[], // أضف هذا الحقل
   });
   const [newBanner, setNewBanner] = useState({
     type: 'text' as 'text' | 'image',
@@ -255,6 +255,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       if (error) throw error;
       setSuccessMsg('تم حفظ إعدادات المظهر بنجاح');
       applyThemeSettings(dbTheme);
+      // تحديث بيانات storeSettings محلياً حتى تظهر التغييرات مباشرة
+      setStoreSettings(prev => ({
+        ...prev,
+        theme_settings: dbTheme
+      }));
+      // إعلام التطبيق الرئيسي لإعادة تحميل الإعدادات
+      if (onSettingsUpdate) onSettingsUpdate();
     } catch (err: any) {
       setError('خطأ في حفظ إعدادات المظهر: ' + err.message);
     } finally {
@@ -423,76 +430,38 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setKeywords(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  // رفع صورة المنتج الرئيسية (صورة واحدة فقط)
-  const handleMainImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'service' | 'banner' = 'service') => {
     const file = event.target.files?.[0];
     if (!file) return;
-    setUploadingImage(true);
+
+    const uploadingState = type === 'service' ? setUploadingImage : setUploadingBannerImage;
+    const setNewState = type === 'service' ? setNewService : setNewBanner;
+
+    uploadingState(true);
     setError(null);
     try {
       if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
       if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('services').upload(filePath, file);
+
+      const { error: uploadError } = await supabase.storage
+        .from('services')
+        .upload(filePath, file);
       if (uploadError) throw uploadError;
+
       const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
-      setNewService(prev => ({ ...prev, image_url: publicUrl }));
+      setNewState(prev => ({ ...prev, image_url: publicUrl }));
+
     } catch (err: any) {
       setError(`خطأ في رفع الصورة: ${err.message}`);
-      setNewService(prev => ({ ...prev, image_url: '' }));
+      setNewState(prev => ({ ...prev, image_url: '' }));
     } finally {
-      setUploadingImage(false);
+      uploadingState(false);
     }
   };
-
-  // رفع صور إضافية للمنتج (اختياري)
-  const handleExtraImagesUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    setUploadingImage(true);
-    setError(null);
-    try {
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملفات صور فقط');
-        if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}_${i}.${fileExt}`;
-        const filePath = `${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('services').upload(filePath, file);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
-        uploadedUrls.push(publicUrl);
-      }
-      setNewService(prev => {
-        const allImages = [...(prev.images_urls || []), ...uploadedUrls];
-        return {
-          ...prev,
-          images_urls: allImages,
-        };
-      });
-    } catch (err: any) {
-      setError(`خطأ في رفع الصور: ${err.message}`);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  // حذف صورة إضافية من صور المنتج قبل الحفظ
-  const handleRemoveExtraImage = (index: number) => {
-    setNewService(prev => {
-      const updated = [...(prev.images_urls || [])];
-      updated.splice(index, 1);
-      return {
-        ...prev,
-        images_urls: updated,
-      };
-    });
-  };
-
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -618,8 +587,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCategory || !newService.title.trim() || !newService.image_url) {
-      setError("يجب اختيار قسم وتحديد عنوان وصورة رئيسية للمنتج.");
+    if (!selectedCategory || !newService.title.trim()) {
+      setError("يجب اختيار قسم وتحديد عنوان للمنتج.");
       return;
     }
     setIsLoading(true);
@@ -627,14 +596,12 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     try {
       const serviceToAdd = {
         ...newService,
-        category_id: selectedCategory,
-        images_urls: newService.images_urls || [],
-        image_url: (newService.images_urls && newService.images_urls.length > 0) ? newService.images_urls[0] : newService.image_url || '',
+        category_id: selectedCategory
       };
       const { error } = await supabase.from('services').insert([serviceToAdd]);
       if (error) throw error;
 
-      setNewService({ title: '', description: '', image_url: '', images_urls: [], price: '', category_id: '' });
+      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
       setSelectedCategory('');
       await fetchData();
     } catch (err: any) {
@@ -649,8 +616,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setNewService({
       title: service.title,
       description: service.description || '',
-      image_url: (service.images_urls && service.images_urls.length > 0) ? service.images_urls[0] : service.image_url || '',
-      images_urls: service.images_urls || [],
+      image_url: service.image_url || '',
       price: service.price || '',
       category_id: service.category_id || ''
     });
@@ -671,8 +637,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       const serviceToUpdate = {
         title: newService.title,
         description: newService.description,
-        image_url: (newService.images_urls && newService.images_urls.length > 0) ? newService.images_urls[0] : newService.image_url,
-        images_urls: newService.images_urls || [],
+        image_url: newService.image_url,
         price: newService.price,
         category_id: selectedCategory
       };
@@ -682,7 +647,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         .eq('id', editingService);
       if (error) throw error;
 
-      setNewService({ title: '', description: '', image_url: '', images_urls: [], price: '', category_id: '' });
+      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
       setSelectedCategory('');
       setEditingService(null);
       await fetchData();
@@ -814,6 +779,43 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     await supabase.auth.signOut();
     setIsLoading(false);
     navigate('/admin/login');
+  };
+
+  // عند رفع صورة جديدة للمعرض، لا تكرر الصورة الرئيسية في المعرض
+  const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) continue;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('services')
+          .upload(fileName, file, { upsert: true });
+        if (uploadError) continue;
+        const { data: { publicUrl } } = supabase.storage
+          .from('services')
+          .getPublicUrl(fileName);
+        uploadedUrls.push(publicUrl);
+      }
+      setNewService(prev => {
+        // Remove duplicates and main image from gallery if present
+        const gallery = [...(prev.gallery || []), ...uploadedUrls].filter(Boolean);
+        const filteredGallery = Array.from(new Set(gallery)).filter(img => img !== prev.image_url);
+        return {
+          ...prev,
+          gallery: filteredGallery,
+        };
+      });
+    } catch (err: any) {
+      setError(`خطأ في رفع الصور: ${err.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   if (isLoading && categories.length === 0 && services.length === 0) {
@@ -1644,78 +1646,34 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
-                        {/* رفع صورة المنتج الرئيسية */}
-                        <div className="relative mb-4">
+                        {/* رفع الصورة */}
+                        <div className="relative">
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={handleMainImageUpload}
+                            onChange={handleImageUpload}
                             className="hidden"
-                            id="main-image-upload"
+                            id="image-upload"
                             disabled={uploadingImage || isLoading}
                           />
                           <label
-                            htmlFor="main-image-upload"
+                            htmlFor="image-upload"
                             className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
-                            {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة الرئيسية' : 'اختر صورة رئيسية للمنتج')}
+                            {uploadingImage ? 'جاري رفع الصورة...' : (newService.image_url ? 'تغيير الصورة' : 'اختر صورة للمنتج')}
                           </label>
-                          {/* عرض صورة المنتج الرئيسية */}
                           {newService.image_url && !uploadingImage && (
-                            <div className="mt-3 flex items-center gap-4 bg-black/10 p-2 rounded border border-white/10">
+                            <div className="mt-3 flex items-center justify-center gap-4 bg-black/10 p-2 rounded border border-white/10">
                               <img
                                 src={newService.image_url}
-                                alt="معاينة رئيسية"
+                                alt="معاينة"
                                 className="w-16 h-16 object-cover rounded border border-gray-700"
                               />
-                              <span className="text-gray-400 text-xs">صورة المنتج الرئيسية</span>
+                              <span className="text-gray-400 text-xs">صورة المنتج الحالية/الجديدة</span>
                               <button type="button" onClick={() => setNewService({...newService, image_url: ''})} className="text-red-500 hover:text-red-400 p-1" title="إزالة الصورة">
                                 <X size={16}/>
                               </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* رفع صور إضافية للمنتج (اختياري) */}
-                        <div className="relative">
-                          <label className="block mb-2 text-sm text-gray-400">صور إضافية للمنتج (اختياري)</label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleExtraImagesUpload}
-                            className="hidden"
-                            id="extra-images-upload"
-                            multiple
-                            disabled={uploadingImage || isLoading}
-                          />
-                          <label
-                            htmlFor="extra-images-upload"
-                            className={`w-full flex items-center justify-center px-4 py-2.5 rounded cursor-pointer transition-colors text-gray-300 bg-black/10 backdrop-blur-sm border border-white/10 hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/30 focus:ring-[${lightGold}] ${uploadingImage || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <Upload className={`w-5 h-5 ml-2 text-[${lightGold}] ${uploadingImage ? 'animate-pulse' : ''}`} />
-                            {uploadingImage ? 'جاري رفع الصور...' : 'اختر صور إضافية (اختياري)'}
-                          </label>
-                          {/* عرض الصور الإضافية */}
-                          {newService.images_urls && newService.images_urls.length > 0 && !uploadingImage && (
-                            <div className="mt-3 flex flex-wrap gap-3 bg-black/10 p-2 rounded border border-white/10">
-                              {newService.images_urls.map((url: string, idx: number) => (
-                                <div key={url+idx} className="relative group">
-                                  <img
-                                    src={url}
-                                    alt={`صورة إضافية ${idx+1}`}
-                                    className="w-16 h-16 object-cover rounded border border-gray-700"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveExtraImage(idx)}
-                                    className="absolute -top-2 -left-2 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100"
-                                    title="حذف الصورة"
-                                  >
-                                    <X size={14}/>
-                                  </button>
-                                </div>
-                              ))}
                             </div>
                           )}
                         </div>
@@ -1744,6 +1702,50 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[${lightGold}] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                           disabled={isLoading}
                         />
+                        {/* رفع الصور الإضافية */}
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleGalleryUpload}
+                            className="w-full p-2 rounded bg-black/20 text-white border border-white/10"
+                            disabled={uploadingImage || isLoading}
+                          />
+                          {/* عرض الصور المصغرة مع خيار تحديد الرئيسية والحذف */}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {newService.gallery && newService.gallery.map((img, idx) => (
+                              <div key={img} className="relative">
+                                <img
+                                  src={img}
+                                  alt={`صورة إضافية ${idx + 1}`}
+                                  className={`w-16 h-16 object-cover rounded border-2 ${newService.image_url === img ? 'border-yellow-400' : 'border-white/20'}`}
+                                  onClick={() => setNewService(prev => {
+                                    // إذا اختار المستخدم صورة من المعرض كصورة رئيسية، أزلها من المعرض
+                                    const newGallery = (prev.gallery || []).filter(g => g !== img);
+                                    return { ...prev, image_url: img, gallery: newGallery };
+                                  })}
+                                  style={{ cursor: 'pointer' }}
+                                  title={newService.image_url === img ? 'الصورة الرئيسية' : 'تعيين كصورة رئيسية'}
+                                />
+                                <button
+                                  type="button"
+                                  className="absolute top-0 left-0 bg-black/60 text-white rounded-full p-1 text-xs"
+                                  onClick={() => setNewService(prev => ({
+                                    ...prev,
+                                    gallery: prev.gallery.filter((g) => g !== img),
+                                    image_url: prev.image_url === img ? '' : prev.image_url,
+                                  }))}
+                                  title="حذف الصورة"
+                                >×</button>
+                                {newService.image_url === img && (
+                                  <span className="absolute bottom-0 right-0 bg-yellow-400 text-black text-xs px-1 rounded-tr rounded-bl">رئيسية</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                         {/* زر الإضافة/التعديل */}
                         <div className="flex gap-3">
                           <button
