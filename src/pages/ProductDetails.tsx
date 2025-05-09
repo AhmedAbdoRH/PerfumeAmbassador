@@ -107,12 +107,62 @@ export default function ProductDetails() {
           <div className="rounded-lg shadow-lg overflow-hidden glass">
             <div className="md:flex">
               <div className="md:w-1/2">
+                {/* سلايدر صور المنتج */}
                 <div className="w-full aspect-[4/3] bg-gray-200 relative rounded-t-lg md:rounded-none md:rounded-s-lg overflow-hidden">
-                  <img
-                    src={service.image_url || ''}
-                    alt={service.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  {(() => {
+                    const images: string[] = [
+                      ...(service.image_url ? [service.image_url] : []),
+                      ...((service.images_urls || []).filter((img) => img && img !== service.image_url))
+                    ];
+                    const [current, setCurrent] = React.useState(0);
+                    // Auto-play
+                    React.useEffect(() => {
+                      if (images.length <= 1) return;
+                      const timer = setInterval(() => {
+                        setCurrent((prev) => (prev + 1) % images.length);
+                      }, 2500);
+                      return () => clearInterval(timer);
+                    }, [images.length]);
+                    if (images.length === 0) return (
+                      <div className="flex items-center justify-center w-full h-full text-gray-400">لا توجد صور</div>
+                    );
+                    return (
+                      <>
+                        <img
+                          src={images[current]}
+                          alt={service.title}
+                          className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
+                        />
+                        {/* أزرار التقليب */}
+                        {images.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setCurrent((prev) => (prev - 1 + images.length) % images.length); }}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70 z-10"
+                              aria-label="السابق"
+                            >
+                              &#8592;
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setCurrent((prev) => (prev + 1) % images.length); }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70 z-10"
+                              aria-label="التالي"
+                            >
+                              &#8594;
+                            </button>
+                            {/* نقاط التقدم */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                              {images.map((_, idx) => (
+                                <span key={idx} className={`w-2 h-2 rounded-full ${idx === current ? 'bg-yellow-400' : 'bg-white/40'} border border-black/30`}></span>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="md:w-1/2 p-8">

@@ -11,6 +11,7 @@ export interface Service {
   title: string;
   description: string | null;
   image_url: string | null;
+  images_urls?: string[]; // روابط صور متعددة
   price: string | null;
   created_at: string;
   category?: Category;
