@@ -6,6 +6,7 @@ import Header from './components/Header';
 import BannerSlider from './components/BannerSlider';
 import Services from './components/Services';
 import Footer from './components/Footer';
+import Testimonials from './components/Testimonials';
 import WhatsAppButton from './components/WhatsAppButton';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -144,6 +145,7 @@ const Layout = ({ children, banners }: LayoutProps) => (
       <BannerSlider banners={banners} />
     )}
     <MainFade>{children}</MainFade>
+    {window.location.pathname === '/' && <Testimonials />}
     <Footer storeSettings={storeSettings} />
     <WhatsAppButton />
   </div>

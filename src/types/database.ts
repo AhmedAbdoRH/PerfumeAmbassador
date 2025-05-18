@@ -42,3 +42,11 @@ export interface StoreSettings {
   twitter_url: string | null;
   updated_at: string;
 }
+
+// واجهة آراء العملاء (Testimonials)
+export interface Testimonial {
+  id: string;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}

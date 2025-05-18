@@ -32,7 +32,16 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingBanner, setEditingBanner] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ id: string; type: 'category' | 'service' | 'banner' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme'>('products');
+  const [activeTab, setActiveTab] = useState<'store' | 'banners' | 'products' | 'theme' | 'testimonials'>('products');
+
+  // Testimonials state
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [newTestimonial, setNewTestimonial] = useState({
+    image_url: '',
+    is_active: true,
+  });
+  const [editingTestimonial, setEditingTestimonial] = useState<string | null>(null);
+  const [uploadingTestimonialImage, setUploadingTestimonialImage] = useState(false);
   const [productsSubTab, setProductsSubTab] = useState<'services' | 'categories'>('services');
   const [bannersSubTab, setBannersSubTab] = useState<'text' | 'image'>('text');
 
@@ -90,6 +99,24 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [savingTheme, setSavingTheme] = useState(false);
 
   const navigate = useNavigate();
+
+  // جلب آراء العملاء من قاعدة البيانات
+  const fetchTestimonials = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setTestimonials(data || []);
+    } catch (err: any) {
+      setError('خطأ في جلب آراء العملاء: ' + err.message);
+      setTestimonials([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const initialize = async () => {
@@ -952,6 +979,17 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
               <Palette className="h-5 w-5" />
               <span>تخصيص المظهر</span>
             </button>
+            <button
+              onClick={() => setActiveTab('testimonials')}
+              className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors
+                ${activeTab === 'testimonials'
+                  ? 'bg-yellow-400 text-black shadow-lg border-2 border-yellow-500'
+                  : 'bg-[#232526] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-400 border-2 border-transparent'}
+                `}
+            >
+              <List className="h-5 w-5" />
+              <span>آراء العملاء</span>
+            </button>
           </div>
 
           {/* Main Content */}
@@ -1004,6 +1042,108 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       </span>
                     </>
                   )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'testimonials' && (
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
+                <h2 className="text-2xl font-bold mb-6 text-white">إدارة آراء العملاء</h2>
+                <form
+                  className="space-y-4 mb-8"
+                  onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
+                    e.preventDefault();
+                    setIsLoading(true);
+                    setError(null);
+                    try {
+                      if (editingTestimonial) {
+                        // تحديث صورة رأي
+                        const { error } = await supabase
+                          .from('testimonials')
+                          .update({ image_url: newTestimonial.image_url })
+                          .eq('id', editingTestimonial);
+                        if (error) throw error;
+                        setEditingTestimonial(null);
+                      } else {
+                        // إضافة صورة رأي جديدة
+                        const { error } = await supabase
+                          .from('testimonials')
+                          .insert([{ image_url: newTestimonial.image_url }]);
+                        if (error) throw error;
+                      }
+                      setNewTestimonial({ image_url: '' });
+                      await fetchTestimonials();
+                    } catch (err: any) {
+                      setError('خطأ في حفظ الرأي: ' + err.message);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="flex-1 p-3 rounded border border-gray-600 bg-black/40 text-white cursor-pointer"
+                    onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingTestimonialImage(true);
+                      setError(null);
+                      try {
+                        if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
+                        if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `testimonial_${Date.now()}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage
+                          .from('testimonials')
+                          .upload(fileName, file, { upsert: true });
+                        if (uploadError) throw uploadError;
+                        const { data: { publicUrl } } = supabase.storage.from('testimonials').getPublicUrl(fileName);
+                        // حفظ الرأي مباشرة بعد رفع الصورة
+                        setIsLoading(true);
+                        const { error } = await supabase
+                          .from('testimonials')
+                          .insert([{ image_url: publicUrl }]);
+                        if (error) throw error;
+                        setNewTestimonial({ image_url: '' });
+                        await fetchTestimonials();
+                      } catch (err: any) {
+                        setError(`خطأ في رفع الصورة أو حفظ الرأي: ${err.message}`);
+                      } finally {
+                        setUploadingTestimonialImage(false);
+                        setIsLoading(false);
+                      }
+                    }}
+                  />
+                  {/* لا يوجد أي أزرار أو عناصر إضافية */}
+                </form>
+                <div className="space-y-3">
+                  {isLoading && <p className="text-gray-400 text-center mt-4">جاري تحميل الآراء...</p>}
+                  {!isLoading && testimonials.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد آراء لعرضها.</p>}
+                  {!isLoading && testimonials.map((t: Testimonial) => (
+                    <div key={t.id} className="flex items-center gap-4 border border-gray-700/50 p-2 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30">
+                      <img src={t.image_url} alt="testimonial" className="w-32 h-20 object-cover rounded-2xl bg-white" />
+                      <button
+                        className="bg-red-700 text-white px-3 py-1 rounded"
+                        onClick={async () => {
+                          setIsLoading(true);
+                          setError(null);
+                          try {
+                            const { error } = await supabase
+                              .from('testimonials')
+                              .delete()
+                              .eq('id', t.id);
+                            if (error) throw error;
+                            await fetchTestimonials();
+                          } catch (err: any) {
+                            setError('خطأ في حذف الرأي: ' + err.message);
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                      >حذف</button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1556,9 +1696,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                               </div>
                             )}
                             {banner.is_active && (
-                              <span className="absolute top-2 left-2 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded-full shadow font-bold z-10">
-                                مفعل
-                              </span>
+                              <span className="absolute bottom-0 right-0 bg-green-500 text-white text-xs px-1 rounded-tr rounded-bl">مفعل</span>
                             )}
                           </div>
                           {/* Banner text content */}
@@ -1913,6 +2051,177 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
           </div>
         </div>
       </div>
+      {/* تبويب آراء العملاء */}
+      {activeTab === 'testimonials' && (
+        <div className="bg-black/40 rounded-lg p-8 shadow-lg border border-gray-700/50 mt-4">
+          <h2 className="text-2xl font-bold mb-6 text-white">إدارة آراء العملاء</h2>
+          <form
+            className="space-y-4 mb-8"
+            onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
+              e.preventDefault();
+              setIsLoading(true);
+              setError(null);
+              try {
+                if (editingTestimonial) {
+                  // تحديث رأي عميل
+                  const { error } = await supabase
+                    .from('testimonials')
+                    .update({
+                      customer_name: newTestimonial.customer_name,
+                      text: newTestimonial.text,
+                      image_url: newTestimonial.image_url,
+                      is_active: newTestimonial.is_active,
+                    })
+                    .eq('id', editingTestimonial);
+                  if (error) throw error;
+                  setEditingTestimonial(null);
+                } else {
+                  // إضافة رأي جديد
+                  const { error } = await supabase
+                    .from('testimonials')
+                    .insert([
+                      {
+                        customer_name: newTestimonial.customer_name,
+                        text: newTestimonial.text,
+                        image_url: newTestimonial.image_url,
+                        is_active: newTestimonial.is_active,
+                        created_at: new Date().toISOString(),
+                      },
+                    ]);
+                  if (error) throw error;
+                }
+                setNewTestimonial({ image_url: '', is_active: true });
+                fetchTestimonials();
+              } catch (err: any) {
+                setError('خطأ أثناء حفظ رأي العميل: ' + err.message);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
+            <div className="flex flex-col md:flex-row gap-4">
+              <input
+                type="text"
+                className="flex-1 p-3 rounded border border-gray-600 bg-black/40 text-white"
+                placeholder="اسم العميل"
+                value={newTestimonial.customer_name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTestimonial({ ...newTestimonial, customer_name: e.target.value })}
+                required
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="flex-1 p-3 rounded border border-gray-600 bg-black/40 text-white"
+                onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploadingTestimonialImage(true);
+                  try {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `testimonial_${Date.now()}.${fileExt}`;
+                    const { data, error } = await supabase.storage.from('testimonials').upload(fileName, file);
+                    if (error) throw error;
+                    const { data: publicUrlData } = supabase.storage.from('testimonials').getPublicUrl(fileName);
+                    setNewTestimonial(prev => ({ ...prev, image_url: publicUrlData?.publicUrl || '' }));
+                  } catch (err: any) {
+                    setError('خطأ في رفع الصورة: ' + err.message);
+                  } finally {
+                    setUploadingTestimonialImage(false);
+                  }
+                }}
+              />
+              {newTestimonial.image_url && (
+                <img src={newTestimonial.image_url} alt="صورة العميل" className="w-16 h-16 rounded-full object-cover border-2 border-gray-700" />
+              )}
+            </div>
+            <textarea
+              className="w-full p-3 rounded border border-gray-600 bg-black/40 text-white"
+              placeholder="نص الرأي"
+              value={newTestimonial.text}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewTestimonial({ ...newTestimonial, text: e.target.value })}
+              required
+            />
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-white">
+                <input
+                  type="checkbox"
+                  checked={newTestimonial.is_active}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTestimonial({ ...newTestimonial, is_active: e.target.checked })}
+                />
+                نشط (يظهر في الموقع)
+              </label>
+              <button
+                type="submit"
+                className={greenButtonClass}
+                disabled={isLoading || uploadingTestimonialImage}
+              >
+                {editingTestimonial ? 'تحديث الرأي' : 'إضافة الرأي'}
+              </button>
+              {editingTestimonial && (
+                <button
+                  type="button"
+                  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors flex items-center gap-2 font-bold"
+                  onClick={() => {
+                    setEditingTestimonial(null);
+                    setNewTestimonial({ image_url: '', is_active: true });
+                  }}
+                >
+                  إلغاء
+                </button>
+              )}
+            </div>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </form>
+
+          <h3 className="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">آراء العملاء الحالية</h3>
+          <div className="space-y-3">
+            {isLoading && <p className="text-gray-400 text-center mt-4">جاري تحميل الآراء...</p>}
+            {!isLoading && testimonials.length === 0 && <p className="text-gray-400 text-center mt-4">لا توجد آراء لعرضها.</p>}
+            {testimonials.map((t: Testimonial) => (
+              <div key={t.id} className="border border-gray-700/50 p-4 rounded-lg bg-gradient-to-r from-gray-800/40 to-gray-900/30 flex items-center gap-4">
+                {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-700" />}
+                <div className="flex-1">
+                  <h4 className="font-bold text-white text-lg">{t.customer_name}</h4>
+                  <p className="text-gray-400 text-sm mt-1">{t.text}</p>
+                  <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${t.is_active ? 'bg-green-700 text-white' : 'bg-gray-600 text-white'}`}>{t.is_active ? 'نشط' : 'غير نشط'}</span>
+                </div>
+                <div className="flex gap-3 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingTestimonial(t.id);
+                      setNewTestimonial({ customer_name: t.customer_name, text: t.text, image_url: t.image_url || '', is_active: t.is_active });
+                    }}
+                    title="تعديل الرأي"
+                    className="text-blue-400 hover:text-blue-300 transition-colors p-1"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('هل أنت متأكد من حذف هذا الرأي؟')) return;
+                      setIsLoading(true);
+                      try {
+                        const { error } = await supabase.from('testimonials').delete().eq('id', t.id);
+                        if (error) throw error;
+                        fetchTestimonials();
+                      } catch (err: any) {
+                        setError('خطأ أثناء حذف الرأي: ' + err.message);
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    title="حذف الرأي"
+                    className="text-red-500 hover:text-red-400 transition-colors p-1"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* فوتر وزر العودة للصفحة الرئيسية بلون أبيض شفاف */}
       <footer className="w-full flex justify-center py-8 mt-10">
         <button
@@ -1922,6 +2231,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             ← العودة للصفحة الرئيسية
         </button>
       </footer>
+
     </div>
   );
 }
