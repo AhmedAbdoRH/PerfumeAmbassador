@@ -127,6 +127,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         await fetchStoreSettings();
         await fetchLogoUrl();
         await fetchThemeSettings();
+        await fetchTestimonials();
         applyThemeSettings(themeSettings);
       } catch (err: any) {
         setError(`خطأ أثناء التهيئة: ${err.message}`);
