@@ -2054,7 +2054,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       </div>
       {/* تبويب آراء العملاء */}
       {activeTab === 'testimonials' && (
-        <div className="bg-black/40 rounded-lg p-8 shadow-lg border border-gray-700/50 mt-4">
+        <div className="bg-black/40 rounded-lg p-8 shadow-lg border border-gray-70000 mt-0">
           <h2 className="text-2xl font-bold mb-6 text-white"></h2>
         
 
@@ -2064,7 +2064,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             {!isLoading && testimonials.length === 0 && <p className="text-gray-400 text-center mt-4"></p>}
             {testimonials.map((t: Testimonial) => (
               <div key={t.id} className="">
-                {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-16 h-16 rounded-full object-cover " />}
+                {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-0 h-16 rounded-full object-cover " />}
               
             
               </div>
