@@ -72,10 +72,13 @@ export default function Testimonials() {
 
   if (testimonialsWithImages.length === 0) {
     return (
-      <section className="bg-black/70 py-12 px-4 md:px-0 border-t border-gray-700 mt-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-white mb-10">آراء عملائنا</h2>
-          <div className="text-center text-gray-300 bg-black/40 rounded-lg py-10 text-lg">لا توجد صور آراء لعرضها حالياً.</div>
+      <section className="relative py-12 px-4 md:px-0 border-t border-gray-700/30 mt-16 overflow-hidden">
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-md -z-10"></div>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <h2 className="text-3xl font-bold text-center text-white mb-10 drop-shadow-lg">آراء عملائنا</h2>
+          <div className="text-center text-gray-200 backdrop-blur-xl bg-white/10 rounded-xl shadow-2xl p-8 border border-white/20">
+            لا توجد صور آراء لعرضها حالياً.
+          </div>
         </div>
       </section>
     );
@@ -84,9 +87,12 @@ export default function Testimonials() {
   const currentTestimonial = testimonialsWithImages[currentIndex];
 
   return (
-    <section className="bg-black/70 py-12 px-4 md:px-0 border-t border-gray-700 mt-16">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-white mb-10">آراء عملائنا</h2>
+    <section className="relative py-12 px-4 md:px-0 border-t border-gray-700/30 mt-16 overflow-hidden">
+      {/* Frosted Glass Background */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-md -z-10"></div>
+      
+      <div className="max-w-4xl mx-auto relative z-10">
+        <h2 className="text-3xl font-bold text-center text-white mb-10 drop-shadow-lg">آراء عملائنا</h2>
         
         <div className="relative">
           {/* Navigation Arrows */}
@@ -94,14 +100,14 @@ export default function Testimonials() {
             <>
               <button 
                 onClick={prevTestimonial}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none border border-white/20 shadow-lg"
                 aria-label="التعليق السابق"
               >
                 <ChevronRight className="w-8 h-8" />
               </button>
               <button 
                 onClick={nextTestimonial}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 transform hover:scale-110 focus:outline-none border border-white/20 shadow-lg"
                 aria-label="التعليق التالي"
               >
                 <ChevronLeft className="w-8 h-8" />
@@ -112,15 +118,21 @@ export default function Testimonials() {
           {/* Single Testimonial */}
           <div 
             key={currentTestimonial.id}
-            className={`bg-gradient-to-br from-gray-800/60 to-black/80 rounded-lg shadow-lg p-6 flex flex-col items-center text-center border border-gray-700/60 transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+            className={`backdrop-blur-xl bg-white/10 rounded-xl shadow-2xl p-6 flex flex-col items-center text-center border border-white/20 transition-all duration-500 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+            style={{
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.36)'
+            }}
           >
-            <div className="w-full flex justify-center items-center">
-              <div className="w-full max-w-2xl">
+            <div className="w-full flex justify-center items-center p-2">
+              <div className="w-full max-w-2xl overflow-hidden rounded-xl border-2 border-white/20 bg-white/10">
                 <img
                   src={currentTestimonial.image_url}
                   alt="testimonial image"
-                  className="rounded-2xl mx-auto"
-                  style={{ maxWidth: '100%', height: 'auto', background: 'white' }}
+                  className="w-full h-auto object-cover"
+                  style={{
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)'
+                  }}
                 />
               </div>
             </div>
@@ -128,7 +140,7 @@ export default function Testimonials() {
 
           {/* Dots Indicator */}
           {testimonialsWithImages.length > 1 && (
-            <div className="flex justify-center mt-6 space-x-2">
+            <div className="flex justify-center mt-8 space-x-2">
               {testimonialsWithImages.map((_, index) => (
                 <button
                   key={index}
@@ -137,10 +149,14 @@ export default function Testimonials() {
                     setIsAnimating(true);
                     setTimeout(() => setIsAnimating(false), 500);
                   }}
-                  className={`w-3 h-3 rounded-full transition-all ${index === currentIndex ? 'bg-white w-6' : 'bg-white/30'}`}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentIndex 
+                      ? 'bg-white w-6 backdrop-blur-sm' 
+                      : 'bg-white/30 hover:bg-white/50'
+                  }`}
                   aria-label={`انتقل إلى التعليق ${index + 1}`}
                 />
-              ))}
+              )}
             </div>
           )}
         </div>
