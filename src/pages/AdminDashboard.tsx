@@ -2064,7 +2064,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             {!isLoading && testimonials.length === 0 && <p className="text-gray-400 text-center mt-4"></p>}
             {testimonials.map((t: Testimonial) => (
               <div key={t.id} className="">
-                {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-700" />}
+                {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-16 h-16 rounded-full object-cover " />}
               
             
               </div>
