@@ -61,7 +61,14 @@ export default function Testimonials() {
     return () => clearInterval(timer);
   }, [testimonialsWithImages.length, currentIndex]);
 
-  if (loading) return <div className="text-center text-white py-8">جاري تحميل آراء العملاء...</div>;
+  if (loading) return (
+    <div className="relative py-12 px-4 md:px-0 border-t border-gray-700/30 overflow-hidden">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-md -z-10"></div>
+      <div className="text-center text-white py-8 backdrop-blur-xl bg-white/10 max-w-4xl mx-auto rounded-xl p-8 border border-white/20">
+        جاري تحميل آراء العملاء...
+      </div>
+    </div>
+  );
 
   if (testimonialsWithImages.length === 0) {
     return (
