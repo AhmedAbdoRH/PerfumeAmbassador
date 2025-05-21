@@ -128,10 +128,11 @@ export default function Services() {
             <ServiceCard
               key={service.id}
               id={service.id}
-              title={service.title}
-              description={service.description || ''}
-              imageUrl={service.image_url || ''}
-              price={service.price || ''}
+              title={service.name}
+              description={service.description}
+              imageUrl={service.image_url}
+              price={service.price}
+              salePrice={service.sale_price}
             />
           ))}
         </div>

@@ -51,8 +51,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     description: '',
     image_url: '',
     price: '',
+    sale_price: '',
     category_id: '',
-    gallery: [] as string[], // أضف هذا الحقل
+    gallery: [] as string[],
   });
   const [newBanner, setNewBanner] = useState({
     type: 'text' as 'text' | 'image',
@@ -624,12 +625,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     try {
       const serviceToAdd = {
         ...newService,
-        category_id: selectedCategory
+        category_id: selectedCategory,
+        sale_price: newService.sale_price || null
       };
       const { error } = await supabase.from('services').insert([serviceToAdd]);
       if (error) throw error;
 
-      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+      setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
       setSelectedCategory('');
       await fetchData();
     } catch (err: any) {
@@ -646,8 +648,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       description: service.description || '',
       image_url: service.image_url || '',
       price: service.price || '',
+      sale_price: service.sale_price || '',
       category_id: service.category_id || '',
-      gallery: Array.isArray(service.gallery) ? service.gallery : [], // Ensure gallery is loaded for editing
+      gallery: Array.isArray(service.gallery) ? service.gallery : [],
     });
     setSelectedCategory(service.category_id || '');
     const formElement = document.getElementById('service-form');
@@ -668,8 +671,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         description: newService.description,
         image_url: newService.image_url,
         price: newService.price,
+        sale_price: newService.sale_price || null,
         category_id: selectedCategory,
-        gallery: Array.isArray(newService.gallery) ? newService.gallery : [], // أضف هذا السطر
+        gallery: Array.isArray(newService.gallery) ? newService.gallery : [],
       };
       const { error } = await supabase
         .from('services')
@@ -677,7 +681,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         .eq('id', editingService);
       if (error) throw error;
 
-      setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+      setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
       setSelectedCategory('');
       setEditingService(null);
       await fetchData();
@@ -690,7 +694,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   const handleCancelEdit = () => {
     setEditingService(null);
-    setNewService({ title: '', description: '', image_url: '', price: '', category_id: '' });
+    setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
     setSelectedCategory('');
     setError(null);
   };
@@ -1835,14 +1839,31 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           {categories.length === 0 && <option disabled>لا توجد أقسام</option>}
                         </select>
                         {/* السعر */}
-                        <input
-                          type="text"
-                          placeholder="السعر (مثال: 150 ريال أو مجاني)"
-                          value={newService.price}
-                          onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                          className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
-                          disabled={isLoading}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-1">السعر الأصلي</label>
+                            <input
+                              type="text"
+                              placeholder="السعر (مثال: 150 ريال)"
+                              value={newService.price}
+                              onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                              className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                              disabled={isLoading}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-1">سعر التخفيض (اختياري)</label>
+                            <input
+                              type="text"
+                              placeholder="السعر بعد التخفيض (مثال: 120 ريال)"
+                              value={newService.sale_price}
+                              onChange={(e) => setNewService({ ...newService, sale_price: e.target.value })}
+                              className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
                         {/* رفع الصور الإضافية */}
                         <div>
                           <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج</label>

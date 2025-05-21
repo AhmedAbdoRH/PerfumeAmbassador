@@ -255,7 +255,14 @@ export default function ProductDetails() {
                 </p>
                 <div className="border-t border-gray-700 pt-6 mb-6">
                   <div className="text-2xl font-bold text-accent mb-6">
-                    {service.price}
+                    {service.sale_price ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-2xl text-[#FFD700]">{service.sale_price} جنيه</span>
+                        <span className="text-lg text-gray-400 line-through">{service.price} جنيه</span>
+                      </div>
+                    ) : (
+                      <span>{service.price} جنيه</span>
+                    )}
                   </div>
                   <div className="flex gap-4">
                     <button
@@ -305,7 +312,16 @@ export default function ProductDetails() {
                     className="w-full h-24 md:h-40 object-cover rounded"
                   />
                   <div className="mt-2 text-sm md:text-base font-bold text-secondary truncate">{item.title}</div>
-                  <div className="text-xs md:text-sm text-accent">{item.price}</div>
+                  <div className="flex flex-col items-end">
+                    {item.sale_price ? (
+                      <>
+                        <span className="text-xs md:text-sm text-[#FFD700]">{item.sale_price} جنيه</span>
+                        <span className="text-xs text-gray-400 line-through">{item.price} جنيه</span>
+                      </>
+                    ) : (
+                      <span className="text-xs md:text-sm text-accent">{item.price} جنيه</span>
+                    )}
+                  </div>
                 </div>
               );
             })}

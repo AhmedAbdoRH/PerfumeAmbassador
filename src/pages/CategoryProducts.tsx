@@ -122,6 +122,7 @@ export default function CategoryProducts() {
                   description={service.description || ''}
                   imageUrl={service.image_url || ''}
                   price={service.price || ''}
+                  salePrice={service.sale_price || null}
                 />
               ))}
             </div>

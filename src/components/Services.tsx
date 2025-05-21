@@ -132,6 +132,7 @@ export default function Services() {
               description={service.description || ''}
               imageUrl={service.image_url || ''}
               price={service.price || ''}
+              salePrice={service.sale_price || null}
             />
           ))}
         </div>
