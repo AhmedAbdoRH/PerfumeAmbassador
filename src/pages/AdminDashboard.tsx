@@ -470,15 +470,16 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setError(null);
     try {
       if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
-      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
+      // ضغط/تصغير إذا لزم الأمر
+      const processedFile = await resizeImageIfNeeded(file, 2);
 
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('services')
-        .upload(filePath, file);
+        .upload(filePath, processedFile);
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
@@ -489,34 +490,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       setNewState(prev => ({ ...prev, image_url: '' }));
     } finally {
       uploadingState(false);
-    }
-  };
-
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingLogo(true);
-    setError(null);
-    try {
-      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
-      if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
-
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload('logo.png', file, {
-          cacheControl: '0',
-          upsert: true
-        });
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl('logo.png');
-      setLogoUrl(`${publicUrl}?t=${new Date().getTime()}`);
-
-    } catch (err: any) {
-      setError(`خطأ في رفع الشعار: ${err.message}`);
-    } finally {
-      setUploadingLogo(false);
     }
   };
 
@@ -815,7 +788,50 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     navigate('/admin/login');
   };
 
-  // عند رفع صورة جديدة للمعرض، لا تكرر الصورة الرئيسية في المعرض
+  // دالة لضغط وتصغير الصورة إذا تجاوزت 2 ميجا
+  async function resizeImageIfNeeded(file: File, maxSizeMB = 2): Promise<File> {
+    if (file.size <= maxSizeMB * 1024 * 1024) return file;
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.onload = () => {
+          let [w, h] = [img.width, img.height];
+          // تصغير الأبعاد تدريجياً حتى يقل الحجم
+          let quality = 0.92;
+          const canvas = document.createElement('canvas');
+          function process() {
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return reject(new Error('فشل ضغط الصورة'));
+                if (blob.size <= maxSizeMB * 1024 * 1024 || (w < 300 || h < 300)) {
+                  resolve(new File([blob], file.name, { type: file.type }));
+                } else {
+                  // قلل الأبعاد والجودة أكثر
+                  w = Math.round(w * 0.85);
+                  h = Math.round(h * 0.85);
+                  quality -= 0.07;
+                  process();
+                }
+              },
+              file.type,
+              quality
+            );
+          }
+          process();
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -825,11 +841,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       const uploadedUrls: string[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
-        const fileExt = file.name.split('.').pop();
+        // ضغط/تصغير إذا لزم الأمر
+        const processedFile = await resizeImageIfNeeded(file, 2);
+        const fileExt = processedFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('services')
-          .upload(fileName, file, { upsert: true });
+          .upload(fileName, processedFile, { upsert: true });
         if (uploadError) continue;
         const { data: { publicUrl } } = supabase.storage
           .from('services')
@@ -851,6 +869,39 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       setUploadingImage(false);
     }
   };
+
+  const handleImageUploadTestimonial = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingTestimonialImage(true);
+    setError(null);
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
+      // ضغط/تصغير إذا لزم الأمر
+      const processedFile = await resizeImageIfNeeded(file, 2);
+      const fileExt = processedFile.name.split('.').pop();
+      const fileName = `testimonial_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('testimonials')
+        .upload(fileName, processedFile, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('testimonials').getPublicUrl(fileName);
+      // حفظ الرأي مباشرة بعد رفع الصورة
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('testimonials')
+        .insert([{ image_url: publicUrl }]);
+      if (error) throw error;
+      setNewTestimonial({ image_url: '' });
+      await fetchTestimonials();
+    } catch (err: any) {
+      setError(`خطأ في رفع الصورة أو حفظ الرأي: ${err.message}`);
+    } finally {
+      setUploadingTestimonialImage(false);
+      setIsLoading(false);
+    }
+  }
 
   if (isLoading && categories.length === 0 && services.length === 0) {
     return (
@@ -1096,12 +1147,13 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                       setError(null);
                       try {
                         if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
-                        if (file.size > 2 * 1024 * 1024) throw new Error('حجم الصورة يجب أن لا يتجاوز 2 ميجابايت');
-                        const fileExt = file.name.split('.').pop();
+                        // ضغط/تصغير إذا لزم الأمر
+                        const processedFile = await resizeImageIfNeeded(file, 2);
+                        const fileExt = processedFile.name.split('.').pop();
                         const fileName = `testimonial_${Date.now()}.${fileExt}`;
                         const { error: uploadError } = await supabase.storage
                           .from('testimonials')
-                          .upload(fileName, file, { upsert: true });
+                          .upload(fileName, processedFile, { upsert: true });
                         if (uploadError) throw uploadError;
                         const { data: { publicUrl } } = supabase.storage.from('testimonials').getPublicUrl(fileName);
                         // حفظ الرأي مباشرة بعد رفع الصورة
