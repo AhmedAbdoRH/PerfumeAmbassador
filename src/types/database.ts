@@ -13,6 +13,7 @@ export interface Service {
   image_url: string | null;
   images_urls?: string[]; // روابط صور متعددة
   price: string | null;
+  sale_price: string | null; // السعر المخفض
   created_at: string;
   category?: Category;
 }

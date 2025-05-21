@@ -7,13 +7,14 @@ interface ProductCardProps {
   description: string;
   imageUrl: string;
   price: string;
+  salePrice?: string | null;
   id: string | number;
 }
 
 // Define the light gold color using the hex code from the Hero component
 const lightGold = '#FFD700'; // This is standard gold color
 
-export default function ProductCard({ title, description, imageUrl, price, id }: ProductCardProps) {
+export default function ProductCard({ title, description, imageUrl, price, salePrice, id }: ProductCardProps) {
   /**
    * Handles the click event for the "Contact Now" button.
    * Prevents the default link behavior and opens a WhatsApp chat
@@ -64,10 +65,17 @@ export default function ProductCard({ title, description, imageUrl, price, id }:
           <p className="text-secondary/70 mb-4 line-clamp-2">{description}</p>
           {/* Price and Contact button container */}
           <div className="flex justify-between items-center">
-            {/* Product price */}
-            {/* Price text color is set using the light gold hex code */}
-            {/* Apply light gold text color using arbitrary value syntax */}
-            <span className={`font-bold text-lg text-[${lightGold}]`}>{price}</span>
+            {/* Product price with sale price support */}
+            <div className="flex flex-col items-end">
+              {salePrice ? (
+                <>
+                  <span className={`font-bold text-lg text-[${lightGold}]`}>{salePrice} جنيه</span>
+                  <span className="text-sm text-gray-400 line-through">{price} جنيه</span>
+                </>
+              ) : (
+                <span className={`font-bold text-lg text-[${lightGold}]`}>{price} جنيه</span>
+              )}
+            </div>
             {/* "Contact Now" button */}
             {/* Background color is light gold with 80% opacity using arbitrary value */}
             {/* On hover, background changes to a slightly darker gold (yellow-500), matching Hero component */}
