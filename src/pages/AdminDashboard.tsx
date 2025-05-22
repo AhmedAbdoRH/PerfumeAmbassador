@@ -1103,7 +1103,39 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             )}
 
             {activeTab === 'testimonials' && (
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
+  <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-white">إدارة آراء العملاء</h2>
+      <div className="flex items-center gap-2">
+        <label htmlFor="toggle-testimonials" className="text-white font-bold">إظهار قسم آراء العملاء</label>
+        <input
+          id="toggle-testimonials"
+          type="checkbox"
+          checked={!!storeSettings.show_testimonials}
+          onChange={async (e) => {
+            const newValue = e.target.checked;
+            setStoreSettings((prev) => ({ ...prev, show_testimonials: newValue }));
+            try {
+              setIsLoading(true);
+              const { error } = await supabase
+                .from('store_settings')
+                .update({ show_testimonials: newValue })
+                .eq('id', STORE_SETTINGS_ID);
+              if (error) throw error;
+              setSuccessMsg(newValue ? 'تم تفعيل قسم آراء العملاء' : 'تم إخفاء قسم آراء العملاء');
+              // Trigger a storage event for App.tsx to re-fetch settings
+              localStorage.setItem('storeSettingsUpdated', Date.now().toString());
+              if (onSettingsUpdate) onSettingsUpdate();
+            } catch (err: any) {
+              setError('خطأ في تحديث حالة قسم آراء العملاء: ' + err.message);
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          className="w-6 h-6 accent-yellow-400 cursor-pointer"
+        />
+      </div>
+    </div>
                 <h2 className="text-2xl font-bold mb-6 text-white">إدارة آراء العملاء</h2>
                 <form
                   className="space-y-4 mb-8"
