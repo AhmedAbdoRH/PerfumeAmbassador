@@ -50,6 +50,24 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [mainContentLoaded, setMainContentLoaded] = useState(false); // New state to track main content loading
+  const [testimonialsCount, setTestimonialsCount] = useState<number>(0);
+
+  // جلب عدد آراء العملاء
+  useEffect(() => {
+    async function fetchTestimonialsCount() {
+      const { count, error } = await supabase
+        .from('testimonials')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true);
+      if (!error && typeof count === 'number') setTestimonialsCount(count);
+      else setTestimonialsCount(0);
+    }
+    fetchTestimonialsCount();
+  }, []);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   // Banners state for homepage slider
   const [banners, setBanners] = useState<Banner[]>([]);
   const [mainContentLoaded, setMainContentLoaded] = useState(false); // New state to track main content loading
@@ -123,9 +141,10 @@ function App() {
   interface LayoutProps {
   children: React.ReactNode;
   banners: Banner[];
+  testimonialsCount: number;
 }
 
-const Layout = ({ children, banners }: LayoutProps) => (
+const Layout = ({ children, banners, testimonialsCount }: LayoutProps & { testimonialsCount: number }) => (
   <div
     className="min-h-screen font-cairo"
     style={{
@@ -145,7 +164,7 @@ const Layout = ({ children, banners }: LayoutProps) => (
       <BannerSlider banners={banners} />
     )}
     <MainFade>{children}</MainFade>
-    {window.location.pathname === '/' && <Testimonials />}
+    {window.location.pathname === '/' && testimonialsCount > 0 && <Testimonials />}
     <Footer storeSettings={storeSettings} />
     <WhatsAppButton />
   </div>
@@ -193,12 +212,12 @@ const Layout = ({ children, banners }: LayoutProps) => (
 
           {/* Public Routes using the Layout component */}
           <Route path="/service/:id" element={
-            <Layout banners={banners}>
+            <Layout banners={banners} testimonialsCount={testimonialsCount}>
               <ServiceDetails />
             </Layout>
           } />
           <Route path="/product/:id" element={
-            <Layout banners={banners}>
+            <Layout banners={banners} testimonialsCount={testimonialsCount}>
               <ProductDetails />
             </Layout>
           } />
@@ -208,7 +227,7 @@ const Layout = ({ children, banners }: LayoutProps) => (
             </Layout>
           } />
           <Route path="/" element={
-            <Layout banners={banners}>
+            <Layout banners={banners} testimonialsCount={testimonialsCount}>
               <StaggeredHome
                 storeSettings={storeSettings}
                 banners={banners}
