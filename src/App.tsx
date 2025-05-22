@@ -145,7 +145,9 @@ const Layout = ({ children, banners }: LayoutProps) => (
       <BannerSlider banners={banners} />
     )}
     <MainFade>{children}</MainFade>
-    {window.location.pathname === '/' && <Testimonials />}
+    {window.location.pathname === '/' && storeSettings?.show_testimonials && (
+  <Testimonials />
+)}
     <Footer storeSettings={storeSettings} />
     <WhatsAppButton />
   </div>
