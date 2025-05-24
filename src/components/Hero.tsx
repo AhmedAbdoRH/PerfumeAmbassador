@@ -52,12 +52,18 @@ export default function Hero({ storeSettings, banner: bannerProp }: HeroProps) {
             <div className="flex justify-center mb-6">
               <Sparkles className={`h-12 w-12 sm:h-16 sm:w-16 text-[${lightGold}]`} />
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-center text-white">
-              {storeSettings?.store_name || banner?.title || '   '}
-            </h1>
-            <p className="text-lg sm:text-xl mb-8 text-center text-gray-300">
-              {storeSettings?.store_description || banner?.description || ''}
-            </p>
+            <h1
+  className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-center text-white"
+  style={{ letterSpacing: '0.03em', fontFamily: `'Cairo', 'Tajawal', 'Amiri', 'Arial', sans-serif'` }}
+>
+  {storeSettings?.store_name || banner?.title || '   '}
+</h1>
+<p
+  className="text-lg sm:text-xl mb-8 text-center text-gray-300"
+  style={{ letterSpacing: '0.02em', fontFamily: `'Cairo', 'Tajawal', 'Amiri', 'Arial', 'sans-serif'` }}
+>
+  {storeSettings?.store_description || banner?.description || ''}
+</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href="#products"

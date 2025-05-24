@@ -56,9 +56,14 @@ export default function Services() {
     }
   };
 
+  // عرض تدريجي للمنتجات مع زر "إظهار المزيد"
+  const [visibleCount, setVisibleCount] = useState(10);
   const filteredServices = selectedCategory
     ? services.filter(service => service.category_id === selectedCategory)
     : services;
+  const visibleServices = filteredServices.slice(0, visibleCount);
+  const canShowMore = visibleCount < filteredServices.length;
+  const handleShowMore = () => setVisibleCount(c => c + 10);
 
   if (isLoading) {
     return (
@@ -178,14 +183,9 @@ export default function Services() {
     }
   }}
 >
-  {/* Assuming each child within this grid is also a motion.div with its own variants */}
-  {/* Example for a child: */}
-  {/* <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
-        Your Card Content
-      </motion.div> */}
         >
           <AnimatePresence>
-            {filteredServices.map((service, idx) => (
+            {visibleServices.map((service, idx) => (
               <motion.div
                 key={service.id}
                 initial={{ opacity: 0, y: 24 }}
@@ -204,8 +204,18 @@ export default function Services() {
               </motion.div>
             ))}
           </AnimatePresence>
+          {canShowMore && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={handleShowMore}
+                className="px-8 py-3 rounded-lg bg-[var(--color-secondary,#FFD700)] text-black font-bold text-lg shadow hover:bg-yellow-400 transition-colors duration-200"
+              >
+                إظهار المزيد
+              </button>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </section>
   );
-}س
+}
