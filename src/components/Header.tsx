@@ -15,7 +15,21 @@ export default function Header({ storeSettings }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Service[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Toggle mobile search and focus the input when opened
+  const toggleMobileSearch = () => {
+    setIsMobileSearchOpen(!isMobileSearchOpen);
+    if (!isMobileSearchOpen && searchInputRef.current) {
+      // Small delay to ensure the input is visible before focusing
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    } else {
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -81,6 +95,32 @@ export default function Header({ storeSettings }: HeaderProps) {
     setIsSearchFocused(false);
   };
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      
+      // Close desktop search dropdown
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setIsSearchFocused(false);
+      }
+      
+      // Close mobile search when clicking outside
+      if (isMobileSearchOpen && !target.closest('.mobile-search-container')) {
+        const isSearchIcon = target.closest('button[aria-label="بحث"]');
+        if (!isSearchIcon) {
+          setIsMobileSearchOpen(false);
+          setSearchQuery('');
+          setSearchResults([]);
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMobileSearchOpen]);
+
   return (
     <header className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
@@ -89,13 +129,13 @@ export default function Header({ storeSettings }: HeaderProps) {
             <img 
               src={storeSettings?.logo_url || '/logo.png'}
               alt={storeSettings?.store_name || 'الشعار'} 
-              className="h-20 w-auto"
+              className="h-16 md:h-20 w-auto"
             />
           </Link>
         </div>
         
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-xl mx-8" ref={searchRef}>
+        {/* Desktop Search Bar - Hidden on mobile */}
+        <div className="hidden md:block relative flex-1 max-w-xl mx-8" ref={searchRef}>
           <div className="relative">
             <input
               type="text"
@@ -157,42 +197,113 @@ export default function Header({ storeSettings }: HeaderProps) {
           )}
         </div>
         
-        <nav>
-          <ul className="flex gap-6 items-center">
-            <li>
-              <Link to="/" className="text-white hover:text-[#FFD700] transition-colors duration-300">
-                الرئيسية
-              </Link>
-            </li>
-            <li className="relative">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-1 text-white hover:text-[#FFD700] transition-colors duration-300"
-              >
-                الأقسام
-                <ChevronDown className="h-4 w-4" />
-              </button>
-              {isDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-xl border border-white/10">
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => handleCategoryClick(category.id)}
-                      className="block w-full text-right px-4 py-2 text-white hover:bg-white/10 transition-colors duration-300"
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </li>
-            <li>
-              <a href="#contact" className="text-white hover:text-[#FFD700] transition-colors duration-300">
-                تواصل معنا
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <div className="flex items-center gap-4">
+          {/* Mobile Search Toggle Button */}
+          <button 
+            onClick={toggleMobileSearch}
+            className="md:hidden text-white hover:text-[#FFD700] transition-colors p-2"
+            aria-label="بحث"
+          >
+            <Search className="h-6 w-6" />
+          </button>
+          
+          <nav>
+            <ul className="flex gap-4 md:gap-6 items-center">
+              <li className="hidden md:block">
+                <Link to="/" className="text-white hover:text-[#FFD700] transition-colors duration-300">
+                  الرئيسية
+                </Link>
+              </li>
+              <li className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-1 text-white hover:text-[#FFD700] transition-colors duration-300"
+                >
+                  الأقسام
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                {isDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50">
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => handleCategoryClick(category.id)}
+                        className="block w-full text-right px-4 py-2 text-white hover:bg-white/10 transition-colors duration-300"
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
+              <li>
+                <a href="#contact" className="text-white hover:text-[#FFD700] transition-colors duration-300">
+                  تواصل معنا
+                </a>
+              </li>
+              </ul>
+            </nav>
+          </div>
+          
+          {/* Mobile Search Bar - Only shown when toggled */}
+          {isMobileSearchOpen && (
+            <div className="fixed top-20 left-0 right-0 bg-black/90 backdrop-blur-md p-4 z-40 border-b border-white/10 md:hidden">
+              <div className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="ابحث عن منتج..."
+                  className="w-full bg-white/10 text-white placeholder-white/50 rounded-full py-3 px-5 pr-12 focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                />
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                
+                {/* Mobile Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-black/90 rounded-lg shadow-xl border border-white/10 overflow-hidden z-50 max-h-80 overflow-y-auto">
+                    {searchResults.map((product) => (
+                      <Link
+                        key={product.id}
+                        to={`/product/${product.id}`}
+                        className="flex items-center p-3 hover:bg-white/10 transition-colors duration-200 border-b border-white/5 last:border-0"
+                        onClick={() => {
+                          clearSearch();
+                          setIsMobileSearchOpen(false);
+                        }}
+                      >
+                        <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-white/5 flex items-center justify-center">
+                          <img 
+                            src={product.displayImage} 
+                            alt={product.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-product.jpg';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 text-right pr-2">
+                          <h4 className="text-white font-medium text-sm">{product.title}</h4>
+                          {product.category?.name && (
+                            <p className="text-xs text-white/60">{product.category.name}</p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
       </div>
     </header>
   );
