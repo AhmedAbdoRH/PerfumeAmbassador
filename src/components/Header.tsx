@@ -176,7 +176,7 @@ export default function Header({ storeSettings }: HeaderProps) {
               onFocus={() => setIsSearchFocused(true)}
               onKeyDown={(e) => e.key === 'Enter' && searchQuery.trim() && navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
               placeholder="ابحث عن منتج..."
-              className="w-full bg-white/10 text-white placeholder-white/50 rounded-full py-2 pr-10 pl-4 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300"
+              className="w-full bg-transparent text-white placeholder-white/50 rounded-full py-2 pr-10 pl-4 focus:outline-none focus:ring-2 focus:ring-yellow-300/70 transition-all duration-300 border border-white/20"
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
             {searchQuery && (
@@ -241,7 +241,7 @@ export default function Header({ storeSettings }: HeaderProps) {
                 (document.activeElement as HTMLElement).blur();
               }
             }}
-            className="md:hidden p-2 text-white hover:text-[#FFD700] transition-colors"
+            className="md:hidden p-2 text-white/70 hover:text-[#FFD700] hover:opacity-100 transition-all duration-200"
             aria-label="بحث"
           >
             <Search className="h-6 w-6" />
@@ -287,7 +287,7 @@ export default function Header({ storeSettings }: HeaderProps) {
           
           {/* Mobile Search Bar - Only shown when toggled */}
           {isMobileSearchOpen && (
-            <div className="fixed top-20 left-0 right-0 bg-black/90 backdrop-blur-md p-4 z-40 border-b border-white/10 md:hidden">
+            <div className={`fixed top-24 left-0 right-0 bg-transparent p-4 z-40 border-b border-transparent md:hidden transition-all duration-300 ease-out ${isMobileSearchOpen ? 'translate-y-0 opacity-100' : 'translate-y-[-20px] opacity-0 pointer-events-none'}`}>
               <div className="relative">
                 <input
                   ref={searchInputRef}
@@ -295,21 +295,23 @@ export default function Header({ storeSettings }: HeaderProps) {
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="ابحث عن منتج..."
-                  className="w-full bg-white/10 text-white placeholder-white/50 rounded-full py-3 px-5 pr-12 focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                  className="w-full bg-black/90 text-white placeholder-white/50 rounded-full py-3 px-5 pr-12 focus:outline-none focus:ring-2 focus:ring-gray-600 border border-white/20 transition-all duration-300 ease-out transform hover:scale-[1.02] focus:scale-[1.02]"
                 />
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchResults([]);
-                  }}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
                 
                 {/* Mobile Search Results */}
                 {searchResults.length > 0 && (
-                  <div className="absolute left-0 right-0 mt-2 bg-black/90 rounded-lg shadow-xl border border-white/10 overflow-hidden z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute left-0 right-0 mt-2 bg-black/30 backdrop-blur-md rounded-lg shadow-xl border border-white/10 overflow-hidden z-50 max-h-80 overflow-y-auto">
                     {searchResults.map((product) => (
                       <Link
                         key={product.id}
