@@ -96,28 +96,43 @@ export default function Header({ storeSettings }: HeaderProps) {
   };
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement;
-      
-      // Close desktop search dropdown
-      if (searchRef.current && !searchRef.current.contains(target)) {
-        setIsSearchFocused(false);
-      }
-      
-      // Close mobile search when clicking outside
-      if (isMobileSearchOpen && !target.closest('.mobile-search-container')) {
-        const isSearchIcon = target.closest('button[aria-label="بحث"]');
-        if (!isSearchIcon) {
-          setIsMobileSearchOpen(false);
-          setSearchQuery('');
-          setSearchResults([]);
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      // Skip if it's a touch event on mobile
+      if ('touches' in event) {
+        const target = event.target as HTMLElement;
+        // Only handle touch events for the search input
+        if (searchInputRef.current && searchInputRef.current.contains(target)) {
+          return;
+        }
+      } else {
+        const target = event.target as HTMLElement;
+        
+        // Close desktop search dropdown
+        if (searchRef.current && !searchRef.current.contains(target)) {
+          setIsSearchFocused(false);
+        }
+        
+        // Close mobile search when clicking outside
+        if (isMobileSearchOpen && !target.closest('.mobile-search-container')) {
+          const isSearchIcon = target.closest('button[aria-label="بحث"]');
+          const isSearchInput = target.closest('input[type="text"]');
+          
+          if (!isSearchIcon && !isSearchInput) {
+            setIsMobileSearchOpen(false);
+            setSearchQuery('');
+            setSearchResults([]);
+          }
         }
       }
     }
 
+    // Add both mouse and touch events
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isMobileSearchOpen]);
 
