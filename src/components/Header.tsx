@@ -136,6 +136,23 @@ export default function Header({ storeSettings }: HeaderProps) {
     };
   }, [isMobileSearchOpen]);
 
+  useEffect(() => {
+    if (isMobileSearchOpen && searchInputRef.current) {
+      // Small timeout to ensure the input is visible before focusing
+      const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          // For mobile devices, we need to explicitly open the keyboard
+          if ('virtualKeyboard' in navigator) {
+            // @ts-ignore - VirtualKeyboard API is experimental
+            navigator.virtualKeyboard.show();
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobileSearchOpen]);
+
   return (
     <header className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
@@ -215,8 +232,16 @@ export default function Header({ storeSettings }: HeaderProps) {
         <div className="flex items-center gap-4">
           {/* Mobile Search Toggle Button */}
           <button 
-            onClick={toggleMobileSearch}
-            className="md:hidden text-white hover:text-[#FFD700] transition-colors p-2"
+            onClick={() => {
+              const wasOpen = isMobileSearchOpen;
+              setIsMobileSearchOpen(!wasOpen);
+              // If we're opening the search, focus will be handled by the effect
+              // If we're closing it, blur any active element
+              if (wasOpen && document.activeElement) {
+                (document.activeElement as HTMLElement).blur();
+              }
+            }}
+            className="md:hidden p-2 text-white hover:text-[#FFD700] transition-colors"
             aria-label="بحث"
           >
             <Search className="h-6 w-6" />
