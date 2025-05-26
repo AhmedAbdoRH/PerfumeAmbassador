@@ -5,17 +5,26 @@ export interface Category {
   created_at: string;
 }
 
+export interface ProductImage {
+  id: string;
+  image_url: string;
+  created_at: string;
+}
+
 export interface Service {
   id: number;
   category_id: string;
   title: string;
   description: string | null;
   image_url: string | null;
+  images?: ProductImage[]; // Array of product images
   images_urls?: string[]; // روابط صور متعددة
   price: string | null;
   sale_price: string | null; // السعر المخفض
   created_at: string;
   category?: Category;
+  // For search results display
+  displayImage?: string;
 }
 
 export interface Banner {
