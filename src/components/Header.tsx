@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Category, StoreSettings } from '../types/database';
-
-const lightGold = '#FFD700';
+import type { Category, StoreSettings, Service } from '../types/database';
 
 interface HeaderProps {
   storeSettings?: StoreSettings | null;
@@ -14,6 +12,10 @@ export default function Header({ storeSettings }: HeaderProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Service[]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -32,6 +34,53 @@ export default function Header({ storeSettings }: HeaderProps) {
     navigate(`/category/${categoryId}`);
   };
 
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      // Search in both name and description using ilike for case-insensitive partial matching
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          *,
+          category:categories(*),
+          product_images(image_url)
+        `)
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+        .limit(10);
+
+      if (servicesError) throw servicesError;
+      
+      if (!services) {
+        setSearchResults([]);
+        return;
+      }
+      
+      // Transform the data to handle images properly
+      const formattedServices = services.map(service => ({
+        ...service,
+        // Use the first product image if available, otherwise fallback to the main image_url
+        displayImage: service.product_images?.[0]?.image_url || service.image_url || '/placeholder-product.jpg'
+      }));
+      
+      setSearchResults(formattedServices);
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setSearchResults([]);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearchFocused(false);
+  };
+
   return (
     <header className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
@@ -44,6 +93,70 @@ export default function Header({ storeSettings }: HeaderProps) {
             />
           </Link>
         </div>
+        
+        {/* Search Bar */}
+        <div className="relative flex-1 max-w-xl mx-8" ref={searchRef}>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onKeyDown={(e) => e.key === 'Enter' && searchQuery.trim() && navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
+              placeholder="ابحث عن منتج..."
+              className="w-full bg-white/10 text-white placeholder-white/50 rounded-full py-2 pr-10 pl-4 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {isSearchFocused && (searchResults.length > 0 || (searchQuery.length >= 2 && searchResults.length === 0)) && (
+            <div className="absolute mt-2 w-full bg-black/90 backdrop-blur-md rounded-lg shadow-xl border border-white/10 overflow-hidden z-50">
+              {searchResults.map((product) => (
+                <Link
+                  key={product.id}
+                  to={`/product/${product.id}`}
+                  className="flex items-center p-3 hover:bg-white/10 transition-colors duration-200 border-b border-white/5 last:border-0"
+                  onClick={clearSearch}
+                >
+                  <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-white/5 flex items-center justify-center">
+                    <img 
+                      src={product.displayImage} 
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder-product.jpg';
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 text-right pr-2">
+                    <h4 className="text-white font-medium">{product.title}</h4>
+                    <p className="text-xs text-white/60">
+                      {product.category?.name || ''}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+              
+              {searchResults.length === 0 && searchQuery.length >= 2 && (
+                <div className="p-4 text-center text-white/70">
+                  لا توجد نتائج لـ "{searchQuery}"
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
         <nav>
           <ul className="flex gap-6 items-center">
             <li>
