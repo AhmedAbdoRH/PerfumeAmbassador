@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Category, Service, Banner, StoreSettings } from '../types/database';
 import { Trash2, Edit, Plus, Save, X, Upload, ChevronDown, ChevronUp, Facebook, Instagram, Twitter, Palette, Store, Image, List, Package } from 'lucide-react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const lightGold = '#FFD700';
 const brownDark = '#3d2c1d';
@@ -55,12 +57,11 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     category_id: '',
     gallery: [] as string[],
   });
-  const [newBanner, setNewBanner] = useState({
-    type: 'text' as 'text' | 'image',
+  const [newBanner, setNewBanner] = useState<Partial<Banner>>({
+    type: 'text',
     title: '',
     description: '',
-    image_url: '',
-    is_active: true
+    image_url: ''
   });
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
@@ -112,7 +113,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       if (error) throw error;
       setTestimonials(data || []);
     } catch (err: any) {
-      setError('خطأ في جلب آراء العملاء: ' + err.message);
+      toast.error('خطأ في جلب آراء العملاء: ' + err.message);
       setTestimonials([]);
     } finally {
       setIsLoading(false);
@@ -131,7 +132,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         await fetchTestimonials();
         applyThemeSettings(themeSettings);
       } catch (err: any) {
-        setError(`خطأ أثناء التهيئة: ${err.message}`);
+        toast.error(`خطأ أثناء التهيئة: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -149,7 +150,6 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   const fetchData = async () => {
     setIsLoading(true);
-    setError(null);
     try {
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
@@ -172,7 +172,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       if (bannersError) throw bannersError;
       setBanners(bannersData || []);
     } catch (err: any) {
-      setError(`خطأ في جلب البيانات: ${err.message}`);
+      toast.error(`خطأ في جلب البيانات: ${err.message}`);
       setCategories([]);
       setServices([]);
       setBanners([]);
@@ -364,18 +364,14 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       const fileExt = file.name.split('.').pop();
       const fileName = `${type}_${Date.now()}.${fileExt}`;
 
-      const { error: uploadError, data } = await supabase.storage
-        .from('services')
-        .upload(fileName, file, {
-          cacheControl: '0',
-          upsert: true
-        });
+      const { error: uploadError, data } = await supabase.storage.from('services').upload(fileName, file, {
+        cacheControl: '0',
+        upsert: true
+      });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('services')
-        .getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(fileName);
 
       setStoreSettings(prev => ({
         ...prev,
@@ -409,9 +405,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setError(null);
 
     try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error('الرجاء اختيار ملف صورة صالح');
-      }
+      if (!file.type.startsWith('image/')) throw new Error('الرجاء اختيار ملف صورة صالح');
       const maxSize = type === 'favicon' ? 0.5 * 1024 * 1024 : 2 * 1024 * 1024;
       if (file.size > maxSize) {
         throw new Error(`حجم الصورة يجب أن لا يتجاوز ${maxSize / (1024 * 1024)} ميجابايت`);
@@ -421,13 +415,12 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         type === 'favicon' ? 'favicon.png' :
         type === 'og_image' ? 'og-image.png' :
         `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload(fileName, file, { upsert: true });
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('services').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage
-        .from('services')
-        .getPublicUrl(fileName);
+
+      const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
       if (type === 'logo') {
         setLogoUrl(publicUrl);
         setStoreSettings(prev => ({ ...prev, logo_url: publicUrl }));
@@ -477,9 +470,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('services')
-        .upload(filePath, processedFile);
+      const { error: uploadError } = await supabase.storage.from('services').upload(filePath, processedFile);
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
@@ -685,14 +676,20 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setIsLoading(true);
     setError(null);
     try {
-      if (newBanner.is_active) {
-        await supabase
-          .from('banners')
-          .update({ is_active: false })
-          .neq('id', '00000000-0000-0000-0000-000000000000');
-      }
+      // Only include fields that exist in the Banner type
+      const bannerData = {
+        type: newBanner.type,
+        title: newBanner.title || null,
+        description: newBanner.description || null,
+        image_url: newBanner.image_url || null,
+        is_active: true
+      };
 
-      const { error } = await supabase.from('banners').insert([newBanner]);
+      const { data, error } = await supabase
+        .from('banners')
+        .insert([bannerData])
+        .select()
+        .single();
       if (error) throw error;
 
       setNewBanner({
@@ -700,7 +697,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         title: '',
         description: '',
         image_url: '',
-        is_active: false
+        is_active: true
       });
       await fetchData();
     } catch (err: any) {
@@ -726,7 +723,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const handleUpdateBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBanner) return;
-    
+
     if (newBanner.type === 'text' && !newBanner.title.trim()) {
       setError("عنوان البانر مطلوب للنوع النصي.");
       return;
@@ -739,16 +736,18 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     setIsLoading(true);
     setError(null);
     try {
-      if (newBanner.is_active) {
-        await supabase
-          .from('banners')
-          .update({ is_active: false })
-          .neq('id', editingBanner);
-      }
+      // Only include fields that exist in the Banner type
+      const bannerData = {
+        type: newBanner.type,
+        title: newBanner.title || null,
+        description: newBanner.description || null,
+        image_url: newBanner.image_url || null,
+        is_active: true
+      };
 
       const { error } = await supabase
         .from('banners')
-        .update(newBanner)
+        .update(bannerData)
         .eq('id', editingBanner);
       if (error) throw error;
 
@@ -757,7 +756,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         title: '',
         description: '',
         image_url: '',
-        is_active: false
+        is_active: true
       });
       setEditingBanner(null);
       await fetchData();
@@ -905,7 +904,25 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   if (isLoading && categories.length === 0 && services.length === 0) {
     return (
-      <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-[${brownDark}] to-black text-white font-[Cairo]`} dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white p-4 md:p-8 relative">
+        <ToastContainer 
+          position="bottom-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={true}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+          toastStyle={{ 
+            backgroundColor: '#1a1a1a',
+            color: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+          }}
+        />
         <div className="text-xl animate-pulse">جاري التحميل...</div>
       </div>
     );
@@ -913,13 +930,31 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   return (
     <div
-      className="min-h-screen font-[Cairo]"
+      className="min-h-screen font-[Cairo] relative"
       style={{
         background: "linear-gradient(135deg, #232526 0%, #414345 100%)",
         color: "#fff"
       }}
       dir="rtl"
     >
+      <ToastContainer 
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={true}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+        toastStyle={{ 
+          backgroundColor: '#1a1a1a',
+          color: '#fff',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        }}
+      />
       {deleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -965,28 +1000,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {error && (
-          <div className="bg-red-800/60 border border-red-600 text-red-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
-            <strong className="font-bold block">خطأ!</strong>
-            <span className="block sm:inline mt-1">{error}</span>
-            <button onClick={() => setError(null)} className="absolute top-2 bottom-2 left-3 px-3 text-red-100 hover:text-white focus:outline-none" title="إغلاق الرسالة">
-              <X size={20}/>
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="bg-green-800/60 border border-green-600 text-green-100 px-4 py-3 rounded mb-6 relative font-medium shadow-lg" role="alert">
-            <span className="block sm:inline">{successMsg}</span>
-            <button 
-              onClick={() => setSuccessMsg(null)} 
-              className="absolute top-2 bottom-2 left-3 px-3 text-green-100 hover:text-white focus:outline-none"
-              title="إغلاق الرسالة"
-            >
-              <X size={20}/>
-            </button>
-          </div>
-        )}
+        {/* Error and success messages are now shown using toast notifications */}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Side Tabs */}
@@ -1065,7 +1079,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                     {activeTab === 'theme' && 'تخصيص المظهر'}
                   </h2>
                   {activeTab === 'banners' && (
-                    <p className="text-gray-200 mt-1 text-sm">يمكنك إضافة بانر نصي أو صورة وتفعيل واحد فقط في نفس الوقت</p>
+                    <p className="text-gray-200 mt-1 text-sm text-center">يمكنك إضافة بانر نصي أو صور</p>
                   )}
                   {activeTab === 'products' && (
                     <p className="text-gray-200 mt-1 text-sm">إدارة المنتجات والأقسام المرتبطة بها</p>
@@ -1079,14 +1093,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                 </div>
                 <div className="flex items-center gap-4">
                   {activeTab === 'banners' && (
-                    <>
-                      <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
-                        <Image className="w-4 h-4" /> {banners.length} بانر
-                      </span>
-                      <span className="inline-flex items-center gap-1 bg-green-400/20 text-green-300 px-3 py-1 rounded-full text-xs font-bold">
-                        {banners.filter(b => b.is_active).length} مفعل
-                      </span>
-                    </>
+                    <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
+                      <Image className="w-4 h-4" /> {banners.length} بانر
+                    </span>
                   )}
                   {activeTab === 'products' && (
                     <>
@@ -1136,7 +1145,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         />
       </div>
     </div>
-                <h2 className="text-2xl font-bold mb-6 text-white">إدارة آراء العملاء</h2>
+                <h2 className="text-2xl font-bold mb-6 text-white">  </h2>
                 <form
                   className="space-y-4 mb-8"
                   onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1718,15 +1727,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         )}
                       </div>
                     )}
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={newBanner.is_active}
-                        onChange={(e) => setNewBanner({ ...newBanner, is_active: e.target.checked })}
-                        className="rounded"
-                      />
-                      تفعيل هذا البانر
-                    </label>
+
                     <div className="flex gap-3">
                       <button
                         type="submit"
@@ -1771,12 +1772,9 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                           ${editingBanner === banner.id ? `ring-2 ring-[#34C759] shadow-[0_0_16px_2px_#34C75933]` : 'hover:border-yellow-400/60 hover:shadow-yellow-400/10'}
                         `}
                       >
-                        {/* Banner type & status */}
-                        <div className="absolute top-3 right-3 flex gap-2 z-10">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${banner.is_active ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'}`}>
-                            {banner.is_active ? 'مفعل' : 'غير مفعل'}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300`}>
+                        {/* Banner type indicator */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300">
                             {banner.type === 'text' ? 'نصي' : 'صورة'}
                           </span>
                         </div>
@@ -1796,9 +1794,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                                 <span className="text-yellow-200 text-lg font-bold">{banner.title || 'بانر نصي'}</span>
                               </div>
                             )}
-                            {banner.is_active && (
-                              <span className="absolute bottom-0 right-0 bg-green-500 text-white text-xs px-1 rounded-tr rounded-bl">مفعل</span>
-                            )}
+
                           </div>
                           {/* Banner text content */}
                           <div className="flex-1 flex flex-col justify-between p-5">
@@ -1974,7 +1970,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                         </div>
                         {/* رفع الصور الإضافية */}
                         <div>
-                          <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج</label>
+                          <label className="block text-sm font-medium text-white mb-1">صور إضافية للمنتج <span className="text-gray-400">(اختياري)</span></label>
                           <input
                             type="file"
                             accept="image/*"
@@ -2068,7 +2064,22 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                                 </div>
                                 <h4 className="font-bold text-white text-lg truncate" title={service.title}>{service.title}</h4>
                                 {service.description && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{service.description}</p>}
-                                {service.price && <p className={`font-semibold mt-2 text-[#34C759] text-lg`}>{service.price}</p>}
+                                {service.sale_price ? (
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <span className="font-semibold text-[#34C759] text-lg">
+                                      {service.sale_price}
+                                    </span>
+                                    {service.price && (
+                                      <span className="text-sm text-gray-400 line-through">
+                                        {service.price}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : service.price && (
+                                  <p className="font-semibold mt-2 text-[#34C759] text-lg">
+                                    {service.price}
+                                  </p>
+                                )}
                               </div>
                               <div className="flex gap-3 flex-shrink-0">
                                 <button
@@ -2185,18 +2196,12 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       {/* تبويب آراء العملاء */}
       {activeTab === 'testimonials' && (
         <div className="bg-black/40 rounded-lg p-8 shadow-lg border border-gray-70000 mt-0">
-          <h2 className="text-2xl font-bold mb-6 text-white"></h2>
-        
-
-        
           <div className="">
             {isLoading && <p className=""></p>}
             {!isLoading && testimonials.length === 0 && <p className="text-gray-400 text-center mt-4"></p>}
             {testimonials.map((t: Testimonial) => (
               <div key={t.id} className="">
                 {t.image_url && <img src={t.image_url} alt={t.customer_name} className="w-0 h-16 rounded-full object-cover " />}
-              
-            
               </div>
             ))}
           </div>
