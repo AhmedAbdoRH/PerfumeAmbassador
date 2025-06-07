@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, ShoppingCart } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { toast } from 'react-toastify';
 
 function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T>();
@@ -26,6 +28,12 @@ export default function ProductDetails() {
   const [prevTransform, setPrevTransform] = useState('translateX(0)');
   const [prevImageIndexState, setPrevImageIndexState] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const { totalItems, toggleCart, addToCart } = useCart();
+
+  // Scroll to top when product changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   // Fetch service and suggested products on ID change
   useEffect(() => {
@@ -167,7 +175,22 @@ export default function ProductDetails() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col pt-24" style={backgroundStyles}>
+    <div className="min-h-screen flex flex-col pt-24 relative" style={backgroundStyles}>
+      {/* Floating Cart Button */}
+      <button 
+        onClick={toggleCart}
+        className="fixed bottom-6 left-6 z-50 bg-[#FFD700] hover:bg-yellow-500 text-black rounded-full p-3 shadow-lg flex items-center justify-center"
+        style={{ width: '56px', height: '56px' }}
+      >
+        <div className="relative">
+          <ShoppingCart className="h-6 w-6" />
+          {totalItems > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {totalItems}
+            </span>
+          )}
+        </div>
+      </button>
       <div className="flex items-center justify-center flex-grow py-8">
         <div className="container mx-auto px-4 max-w-4xl lg:max-w-5xl">
           <div className="rounded-lg shadow-lg overflow-hidden glass">
@@ -240,13 +263,29 @@ export default function ProductDetails() {
                       <span>{service.price} ج</span>
                     )}
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 items-center">
                     <button
                       onClick={handleContact}
                       className="flex-1 bg-[#25D366] text-white py-3 px-6 rounded-lg font-bold hover:bg-opacity-90 flex items-center justify-center gap-2"
                     >
                       <MessageCircle className="h-5 w-5" />
                       تواصل معنا للطلب
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart({
+                          id: service.id,
+                          title: service.title,
+                          price: service.sale_price || service.price,
+                          imageUrl: service.image_url || ''
+                        });
+                        toast.success('تمت إضافة المنتج إلى السلة');
+                      }}
+                      className="bg-[#FFD700] hover:bg-yellow-500 text-black p-3 rounded-lg font-bold flex items-center justify-center"
+                      title="أضف إلى السلة"
+                    >
+                      <ShoppingCart className="h-5 w-5" />
                     </button>
                   </div>
                 </div>

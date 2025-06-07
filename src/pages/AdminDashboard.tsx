@@ -1112,9 +1112,26 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
             )}
 
             {activeTab === 'testimonials' && (
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-8 py-6 bg-gradient-to-r from-yellow-400/20 via-yellow-100/10 to-yellow-400/10 border-b border-yellow-400/20 mb-8 rounded-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
+                    <List className="w-7 h-7 text-yellow-400" />
+                    إدارة آراء العملاء
+                  </h2>
+                  <p className="text-gray-200 mt-1 text-sm">إدارة وتعديل آراء وتقييمات العملاء</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="inline-flex items-center gap-1 bg-yellow-400/20 text-yellow-300 px-3 py-1 rounded-full text-xs font-bold">
+                    <List className="w-4 h-4" /> {testimonials.length} رأي
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'testimonials' && (
   <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/10">
     <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold text-white">إدارة آراء العملاء</h2>
+      <h2 className="text-2xl font-bold text-white">إعدادات قسم آراء العملاء</h2>
       <div className="flex items-center gap-2">
         <label htmlFor="toggle-testimonials" className="text-white font-bold">إظهار قسم آراء العملاء</label>
         <input
@@ -1145,7 +1162,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         />
       </div>
     </div>
-                <h2 className="text-2xl font-bold mb-6 text-white">  </h2>
+
                 <form
                   className="space-y-4 mb-8"
                   onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {

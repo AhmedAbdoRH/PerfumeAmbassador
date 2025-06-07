@@ -1,23 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X, ShoppingCart, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Category, StoreSettings, Service } from '../types/database';
+import { useCart } from '../contexts/CartContext';
+import { toast } from 'react-toastify';
 
 interface HeaderProps {
   storeSettings?: StoreSettings | null;
 }
 
 export default function Header({ storeSettings }: HeaderProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Service[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isCartHovered, setIsCartHovered] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const cartRef = useRef<HTMLLIElement>(null);
+  const { 
+    toggleCart, 
+    totalItems, 
+    cartItems, 
+    removeFromCart, 
+    updateQuantity, 
+    isCartOpen,
+    cartTotal,
+    sendOrderViaWhatsApp
+  } = useCart();
   
   // Toggle mobile search and focus the input when opened
   const toggleMobileSearch = () => {
@@ -31,22 +43,7 @@ export default function Header({ storeSettings }: HeaderProps) {
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
-  const fetchCategories = async () => {
-    const { data } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name');
-    setCategories(data || []);
-  };
-
-  const handleCategoryClick = (categoryId: string) => {
-    setIsDropdownOpen(false);
-    navigate(`/category/${categoryId}`);
-  };
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -153,6 +150,28 @@ export default function Header({ storeSettings }: HeaderProps) {
     }
   }, [isMobileSearchOpen]);
 
+  useEffect(() => {
+    const handleMouseOver = () => {
+      setIsCartHovered(true);
+    };
+
+    const handleMouseOut = () => {
+      setIsCartHovered(false);
+    };
+
+    if (cartRef.current) {
+      cartRef.current.addEventListener('mouseover', handleMouseOver);
+      cartRef.current.addEventListener('mouseout', handleMouseOut);
+    }
+
+    return () => {
+      if (cartRef.current) {
+        cartRef.current.removeEventListener('mouseover', handleMouseOver);
+        cartRef.current.removeEventListener('mouseout', handleMouseOut);
+      }
+    };
+  }, []);
+
   return (
     <header className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
@@ -254,27 +273,121 @@ export default function Header({ storeSettings }: HeaderProps) {
                   الرئيسية
                 </Link>
               </li>
-              <li className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-1 text-white hover:text-[#FFD700] transition-colors duration-300"
-                >
-                  الأقسام
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-                {isDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-black/90 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50">
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategoryClick(category.id)}
-                        className="block w-full text-right px-4 py-2 text-white hover:bg-white/10 transition-colors duration-300"
-                      >
-                        {category.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <li className="relative" ref={cartRef}
+                onMouseEnter={() => !isCartOpen && setIsCartHovered(true)}
+                onMouseLeave={() => !isCartOpen && setIsCartHovered(false)}>
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCart();
+                      if (isCartOpen) {
+                        setIsCartHovered(false);
+                      }
+                    }}
+                    className="relative p-2 text-white hover:text-[#FFD700] transition-colors"
+                    aria-label="عربة التسوق"
+                    aria-expanded={isCartOpen}
+                  >
+                    <ShoppingCart className="h-6 w-6" />
+                    {totalItems > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-[#FFD700] text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {totalItems > 9 ? '9+' : totalItems}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {/* Cart Preview Dropdown */}
+                  {(isCartHovered || isCartOpen) && cartItems.length > 0 && (
+                    <div 
+                      className="fixed left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] max-w-2xl max-h-[calc(100vh-8rem)] bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50 p-4 overflow-y-auto"
+                      style={{
+                        top: 'calc(var(--header-height, 5rem) + 1rem)'
+                      }}
+                    >
+                      <h3 className="text-white font-bold text-lg mb-3 pb-2 border-b border-white/10">
+                        سلة التسوق
+                      </h3>
+                      <div className="max-h-96 overflow-y-auto pr-2">
+                        {cartItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
+                            <div className="w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-white/5">
+                              <img 
+                                src={item.imageUrl} 
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '/placeholder-product.jpg';
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 text-right">
+                              <h4 className="text-white text-sm font-medium line-clamp-1">{item.title}</h4>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-[#FFD700] font-bold">{item.price} ج</span>
+                                <div className="flex items-center gap-2">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (item.quantity > 1) {
+                                        updateQuantity(item.id, item.quantity - 1);
+                                      } else {
+                                        removeFromCart(item.id);
+                                        toast.success('تمت إزالة المنتج من السلة');
+                                      }
+                                    }}
+                                    className="w-6 h-6 flex items-center justify-center bg-white/10 rounded hover:bg-white/20 transition-colors"
+                                  >
+                                    <span className="text-white text-lg">-</span>
+                                  </button>
+                                  <span className="text-white w-6 text-center">{item.quantity}</span>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateQuantity(item.id, item.quantity + 1);
+                                    }}
+                                    className="w-6 h-6 flex items-center justify-center bg-white/10 rounded hover:bg-white/20 transition-colors"
+                                  >
+                                    <span className="text-white text-lg">+</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFromCart(item.id);
+                                toast.success('تمت إزالة المنتج من السلة');
+                              }}
+                              className="text-white/50 hover:text-red-500 transition-colors p-1"
+                              aria-label="إزالة من السلة"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-white/10">
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-white/70">الإجمالي:</span>
+                          <span className="text-[#FFD700] font-bold text-lg">{cartTotal} ج</span>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendOrderViaWhatsApp();
+                            setIsCartHovered(false);
+                          }}
+                          className="w-full bg-[#FFD700] hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg transition-colors duration-300 flex items-center justify-center gap-2"
+                        >
+                          <ShoppingCart className="h-5 w-5" />
+                          اكمال الطلب
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </li>
               <li>
                 <a href="#contact" className="text-white hover:text-[#FFD700] transition-colors duration-300">

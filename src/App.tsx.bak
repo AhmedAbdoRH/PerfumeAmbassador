@@ -93,11 +93,59 @@ function App() {
     return () => { isMounted = false; };
   }, []);
 
+  // Update the theme colors when storeSettings changes
   useEffect(() => {
     if (storeSettings) {
       const theme = (storeSettings as any).theme_settings || {};
-      const primary = theme.primaryColor || '#c7a17a';
-      const secondary = theme.secondaryColor || '#fff';
+      const primary = theme.primaryColor || '#000000';
+      const secondary = theme.secondaryColor || '#ffffff';
+      const backgroundColor = theme.backgroundColor || '#000000';
+      const backgroundColor = theme.backgroundColor || '#000000';
+      const textColor = theme.textColor || '#ffffff';
+      const fontFamily = theme.fontFamily || 'Cairo, sans-serif';
+
+      // Update CSS variables
+      const root = document.documentElement;
+      root.style.setProperty('--color-primary', primary);
+      root.style.setProperty('--color-secondary', secondary);
+      root.style.setProperty('--color-accent', '#d99323');
+      root.style.setProperty('--color-accent-light', '#e0a745');
+      root.style.setProperty('--font-family', fontFamily);
+      root.style.setProperty('--background-color', backgroundColor);
+      root.style.setProperty('--text-color', textColor);
+
+      // Update theme color for mobile browsers
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', backgroundColor);
+      }
+      const backgroundGradient = theme.backgroundGradient || '';
+      const backgroundColor = theme.backgroundColor || '#000';
+
+      const root = document.documentElement;
+      root.style.setProperty('--color-primary', primary);
+      root.style.setProperty('--color-secondary', secondary);
+      root.style.setProperty('--color-accent', '#d99323'); // Keep or adjust as needed
+      root.style.setProperty('--color-accent-light', '#e0a745'); // Keep or adjust
+      root.style.setProperty('--font-family', fontFamily);
+
+      if (backgroundGradient && backgroundGradient.trim() !== '') {
+        root.style.setProperty('--background-gradient', backgroundGradient);
+        root.style.setProperty('--background-color', ''); // Clear single color if gradient is set
+      } else {
+        root.style.setProperty('--background-gradient', ''); // Clear gradient if single color is set
+        root.style.setProperty('--background-color', backgroundColor);
+      }
+    }
+  }, [storeSettings]);
+
+  useEffect(() => {
+    if (storeSettings) {
+      const theme = (storeSettings as any).theme_settings || {};
+      const primary = theme.primaryColor || '#000000';
+      const secondary = theme.secondaryColor || '#ffffff';
+      const backgroundColor = theme.backgroundColor || '#000000';
+      const textColor = theme.textColor || '#ffffff';
       const fontFamily = theme.fontFamily || 'Cairo, sans-serif';
       const backgroundGradient = theme.backgroundGradient || '';
       const backgroundColor = theme.backgroundColor || '#000';
@@ -176,60 +224,40 @@ function App() {
     );
   }
 
+  // Get theme colors
+  const theme = storeSettings?.theme_settings || {};
+  const backgroundColor = theme.backgroundColor || '#000000';
+  const textColor = theme.textColor || '#ffffff';
+
+  const themeBackgroundColor = storeSettings?.theme_settings?.backgroundColor || '#000000';
+  const themeTextColor = storeSettings?.theme_settings?.textColor || '#ffffff';
+
   return (
     <ThemeProvider>
-      <CartProvider>
+      <div 
+        className="min-h-screen flex flex-col"
+        style={{
+          backgroundColor: themeBackgroundColor,
+          color: themeTextColor,
+          backgroundImage: storeSettings?.theme_settings?.backgroundImage 
+            ? `url(${storeSettings.theme_settings.backgroundImage})` 
+            : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <Helmet>
-          <title>{storeSettings?.meta_title || storeSettings?.store_name || 'متجر إلكتروني'}</title>
-          <meta name="description" content={storeSettings?.meta_description || storeSettings?.store_description || 'أفضل المنتجات والعروض'} />
-          {storeSettings?.keywords && storeSettings.keywords.length > 0 && (
-            <meta name="keywords" content={storeSettings.keywords.join(', ')} />
-          )}
-          {storeSettings?.favicon_url && (
-            <link rel="icon" href={storeSettings.favicon_url} />
-          )}
-          {storeSettings?.og_image_url && (
-            <meta property="og:image" content={storeSettings.og_image_url} />
-          )}
-          <meta property="og:title" content={storeSettings?.meta_title || storeSettings?.store_name || ''} />
-          <meta property="og:description" content={storeSettings?.meta_description || storeSettings?.store_description || ''} />
-          <meta property="og:type" content="website" />
-        </Helmet>
-        <Router>
-          <Routes>
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={
-              <PrivateRoute>
-                <AdminDashboard onSettingsUpdate={fetchStoreSettings} />
-              </PrivateRoute>
-            } />
-
-            <Route path="/service/:id" element={
-              <Layout banners={banners}>
-                <ServiceDetails />
-              </Layout>
-            } />
-            <Route path="/product/:id" element={
-              <Layout banners={banners}>
-                <ProductDetails />
-              </Layout>
-            } />
-            <Route path="/category/:categoryId" element={
-              <Layout banners={banners}>
-                <CategoryProducts />
-              </Layout>
-            } />
-            <Route path="/" element={
-              <Layout banners={banners}>
-                <StaggeredHome
-                  storeSettings={storeSettings}
-                  banners={banners}
-                  setMainContentLoaded={setMainContentLoaded}
-                />
-              </Layout>
-            } />
-          </Routes>
-        </Router>
+          <title>{storeSettings?.store_name || 'متجر العطور'}</title>
+                  } />
+                  <Route path="/service/:id" element={
+                    <Layout banners={banners}>
+                      <ServiceDetails />
+                    </Layout>
+                  } />
+                  <Route path="/product/:id" element={
+                    <Layout banners={banners}>
+                      <ProductDetails />
       </CartProvider>
     </ThemeProvider>
   );
