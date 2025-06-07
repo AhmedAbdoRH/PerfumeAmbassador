@@ -35,6 +35,11 @@ export default function ProductDetails() {
     window.scrollTo(0, 0);
   }, [id]);
 
+  // Scroll to top when product changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   // Fetch service and suggested products on ID change
   useEffect(() => {
     if (id) {
