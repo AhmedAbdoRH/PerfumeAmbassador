@@ -27,6 +27,11 @@ export default function ProductDetails() {
   const [prevImageIndexState, setPrevImageIndexState] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Scroll to top when product changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   // Fetch service and suggested products on ID change
   useEffect(() => {
     if (id) {
