@@ -484,7 +484,7 @@ export default function Header({ storeSettings }: HeaderProps) {
                             <span className="z-10">اكمال الطلب</span>
                             {showLoadingBar && (
                               <motion.div 
-                                className="absolute bottom-0 left-0 h-full bg-yellow-400/30 z-0"
+                                className="absolute bottom-0 left-0 h-full bg-yellow-400/0 z-0"
                                 initial={{ width: '0%' }}
                                 animate={{ width: `${progress}%` }}
                                 transition={{ duration: 0.1 }}
