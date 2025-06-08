@@ -4,8 +4,8 @@ import { ChevronDown, Search, X, ShoppingCart, Trash2, ChevronUp, Menu, X as Clo
 import { supabase } from '../lib/supabase';
 import type { Category, StoreSettings, Service } from '../types/database';
 import { useCart } from '../contexts/CartContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface HeaderProps {
   storeSettings?: StoreSettings | null;
@@ -35,10 +35,7 @@ export default function Header({ storeSettings }: HeaderProps) {
     updateQuantity, 
     isCartOpen,
     cartTotal,
-    sendOrderViaWhatsApp,
-    showLoadingBar = false,
-    progress = 0,
-    isAutoShowing
+    sendOrderViaWhatsApp
   } = useCart();
   
   // Toggle mobile search and focus the input when opened
@@ -366,19 +363,14 @@ export default function Header({ storeSettings }: HeaderProps) {
                       </div>
                     </button>
                     
-                    {/* Cart Preview Dropdown with Animation */}
-                    <AnimatePresence>
-                      {(isCartHovered || isCartOpen) && cartItems.length > 0 && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                          className="fixed left-4 mt-2 w-80 max-h-[calc(100vh-8rem)] bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50 p-4 overflow-y-auto"
-                          style={{
-                            top: 'calc(var(--header-height, 5rem) + 0.5rem)'
-                          }}
-                        >
+                    {/* Cart Preview Dropdown */}
+                    {(isCartHovered || isCartOpen) && cartItems.length > 0 && (
+                      <div 
+                        className="fixed left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] max-w-2xl max-h-[calc(100vh-8rem)] bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50 p-4 overflow-y-auto"
+                        style={{
+                          top: 'calc(var(--header-height, 5rem) + 1rem)'
+                        }}
+                      >
                         <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
                           <h3 className="text-white font-bold text-lg">
                             سلة التسوق
@@ -478,35 +470,14 @@ export default function Header({ storeSettings }: HeaderProps) {
                               sendOrderViaWhatsApp();
                               setIsCartHovered(false);
                             }}
-                            className="w-full bg-[#FFD700] hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg transition-colors duration-300 flex items-center justify-center gap-2 relative overflow-hidden"
+                            className="w-full bg-[#FFD700] hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg transition-colors duration-300 flex items-center justify-center gap-2"
                           >
-                            <ShoppingCart className="h-5 w-5 z-10" />
-                            <span className="z-10">اكمال الطلب</span>
-                            {showLoadingBar && (
-                              <motion.div 
-                                className="absolute bottom-0 left-0 h-full bg-yellow-400/0 z-0"
-                                initial={{ width: '0%' }}
-                                animate={{ width: `${progress}%` }}
-                                transition={{ duration: 0.1 }}
-                              />
-                            )}
+                            <ShoppingCart className="h-5 w-5" />
+                            اكمال الطلب
                           </button>
-                          
-                          {/* Loading Bar - Only show when cart is auto-shown after adding a product */}
-                          {isAutoShowing && (
-                            <div className="mt-2 h-1 bg-gray-700/20 rounded-full overflow-hidden">
-                              <motion.div 
-                                className="h-full bg-[#FFD700]/30"
-                                initial={{ width: '100%' }}
-                                animate={{ width: '0%' }}
-                                transition={{ duration: 3.5, ease: 'linear' }}
-                              />
-                            </div>
-                          )}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
-                    </AnimatePresence>
                   </div>
                 </li>
               </ul>
