@@ -214,7 +214,7 @@ export default function Header({ storeSettings }: HeaderProps) {
   return (
     <>
       <header className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
-        <div className="w-full max-w-screen-2xl mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Mobile menu button */}
             <button 
@@ -496,7 +496,7 @@ export default function Header({ storeSettings }: HeaderProps) {
                           {isAutoShowing && (
                             <div className="mt-2 h-1 bg-gray-700/20 rounded-full overflow-hidden">
                               <motion.div 
-                                className="h-full bg-[#FFD700]/5s"
+                                className="h-full bg-[#FFD700]/30"
                                 initial={{ width: '100%' }}
                                 animate={{ width: '0%' }}
                                 transition={{ duration: 3.5, ease: 'linear' }}

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import { X, ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -81,68 +80,15 @@ const itemVariants = {
 };
 
 const Cart: React.FC = () => {
-  const [progress, setProgress] = useState(0);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
-  const duration = 10; // Duration in seconds
   const { 
     cartItems, 
     isCartOpen, 
     toggleCart, 
     removeFromCart, 
-    updateQuantity 
+    updateQuantity,
+    cartTotal 
   } = useCart();
-
-  // Reset progress when cart opens/closes
-  useEffect(() => {
-    if (isCartOpen) {
-      setProgress(0);
-      startProgressBar();
-    } else if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-    }
-    
-    return () => {
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
-    };
-  }, [isCartOpen]);
-
-  // Start the progress bar
-  const startProgressBar = () => {
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-    }
-    
-    const interval = 50; // Update every 50ms for smoother animation
-    const increment = (interval / (duration * 1000)) * 100;
-    
-    progressInterval.current = setInterval(() => {
-      setProgress(prev => {
-        const newProgress = prev + increment;
-        if (newProgress >= 100) {
-          clearInterval(progressInterval.current as NodeJS.Timeout);
-          toggleCart(false);
-          return 100;
-        }
-        return newProgress;
-      });
-    }, interval);
-  };
-
-  // Reset progress on cart interaction
-  const handleCartInteraction = () => {
-    setProgress(0);
-    startProgressBar();
-  };
-
-  // Calculate total price
-  const calculateTotal = (): string => {
-    return cartItems
-      .reduce((total, item) => total + (item.numericPrice * item.quantity), 0)
-      .toFixed(2);
-  };
-
+  
   return (
     <AnimatePresence>
       {isCartOpen && (
@@ -198,7 +144,6 @@ const Cart: React.FC = () => {
                       animate="visible"
                       exit="exit"
                       layout
-                      onClick={handleCartInteraction}
                     >
                       {item.imageUrl && (
                         <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border">
@@ -221,7 +166,6 @@ const Cart: React.FC = () => {
                               } else {
                                 removeFromCart(item.id);
                               }
-                              handleCartInteraction();
                             }}
                             className="p-1 text-gray-500 hover:bg-gray-100 rounded"
                             aria-label="تقليل الكمية"
@@ -233,7 +177,6 @@ const Cart: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               updateQuantity(item.id, item.quantity + 1);
-                              handleCartInteraction();
                             }}
                             className="p-1 text-gray-500 hover:bg-gray-100 rounded"
                             aria-label="زيادة الكمية"
@@ -246,7 +189,6 @@ const Cart: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           removeFromCart(item.id);
-                          handleCartInteraction();
                         }}
                         className="text-red-500 hover:text-red-700 p-2"
                         aria-label="إزالة المنتج"
@@ -259,22 +201,12 @@ const Cart: React.FC = () => {
               )}
             </div>
 
-            {/* Loading bar at the bottom */}
-            <div className="h-1 bg-gray-100 bg-opacity-30">
-              <motion.div 
-                className="h-full bg-gradient-to-r from-green-400/40 to-green-600/40"
-                initial={{ width: '0%' }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.1, ease: 'linear' }}
-              />
-            </div>
-
             {/* Footer with total and checkout button */}
             {cartItems.length > 0 && (
               <div className="border-t p-4">
                 <div className="flex justify-between text-lg font-medium mb-4">
                   <span>المجموع</span>
-                  <span>{calculateTotal()} ر.س</span>
+                  <span>{cartTotal} ر.س</span>
                 </div>
                 <button
                   onClick={() => {

@@ -29,7 +29,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
   return (
     <div
       className={`relative w-full h-[200px] md:h-[350px] lg:h-[500px] flex items-center justify-center overflow-hidden rounded-none md:mt-24 fade-in-banner${fadeIn ? ' fade-in-active' : ''}`}
-      style={{ marginTop: 'calc(var(--header-height, 4.5rem) + 0.5rem)' }}
+      style={{ marginTop: 'var(--header-height, 4rem)' }}
     >
       {/* تأثير Fade-in للبانر عند أول تحميل */}
       <style>{`
