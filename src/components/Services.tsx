@@ -101,15 +101,6 @@ export default function Services() {
         >
           منتجاتنا
         </motion.h2>
-        {/* الفاصل */}
-        <motion.div
-          className={`w-full h-1 bg-[${lightGold}] mb-0`}
-          variants={{
-            hidden: { opacity: 0, scaleX: 0 },
-            visible: { opacity: 1, scaleX: 1, transition: { duration: 0.8, ease: 'easeInOut' } },
-          }}
-        />
-
         {/* الفئات */}
         <motion.div
           className="flex flex-wrap gap-4 justify-center mb-12"

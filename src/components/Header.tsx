@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Search, X, ShoppingCart, Trash2 } from 'lucide-react';
+import { ChevronDown, Search, X, ShoppingCart, Trash2, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Category, StoreSettings, Service } from '../types/database';
 import { useCart } from '../contexts/CartContext';
 import { toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface HeaderProps {
   storeSettings?: StoreSettings | null;
@@ -20,9 +21,11 @@ export default function Header({ storeSettings }: HeaderProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cartRef = useRef<HTMLLIElement>(null);
+  const cartButtonRef = useRef<HTMLButtonElement>(null);
+  const cartDropdownRef = useRef<HTMLDivElement>(null);
   const { 
     toggleCart, 
-    totalItems, 
+    itemCount, 
     cartItems, 
     removeFromCart, 
     updateQuantity, 
@@ -187,20 +190,29 @@ export default function Header({ storeSettings }: HeaderProps) {
         
         {/* Desktop Search Bar - Hidden on mobile */}
         <div className="hidden md:block relative flex-1 max-w-xl mx-8" ref={searchRef}>
-          <div className="relative">
+          <div className="relative hidden md:block flex-1 max-w-2xl">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              onKeyDown={(e) => e.key === 'Enter' && searchQuery.trim() && navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                // Close cart when search input is focused
+                if (isCartOpen) {
+                  toggleCart(false);
+                }
+              }}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
               placeholder="ابحث عن منتج..."
               className="w-full bg-white/10 text-white placeholder-white/50 rounded-full py-2 pr-10 pl-4 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300"
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
             {searchQuery && (
               <button
-                onClick={clearSearch}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearSearch();
+                }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors"
               >
                 <X className="h-4 w-4" />
@@ -254,6 +266,10 @@ export default function Header({ storeSettings }: HeaderProps) {
             onClick={() => {
               const wasOpen = isMobileSearchOpen;
               setIsMobileSearchOpen(!wasOpen);
+              // Close cart if it's open
+              if (isCartOpen) {
+                toggleCart(false);
+              }
               // If we're opening the search, focus will be handled by the effect
               // If we're closing it, blur any active element
               if (wasOpen && document.activeElement) {
@@ -273,6 +289,11 @@ export default function Header({ storeSettings }: HeaderProps) {
                   الرئيسية
                 </Link>
               </li>
+              <li>
+                <a href="#contact" className="text-white hover:text-[#FFD700] transition-colors duration-300">
+                  تواصل معنا
+                </a>
+              </li>
               <li className="relative" ref={cartRef}
                 onMouseEnter={() => !isCartOpen && setIsCartHovered(true)}
                 onMouseLeave={() => !isCartOpen && setIsCartHovered(false)}>
@@ -289,12 +310,14 @@ export default function Header({ storeSettings }: HeaderProps) {
                     aria-label="عربة التسوق"
                     aria-expanded={isCartOpen}
                   >
-                    <ShoppingCart className="h-6 w-6" />
-                    {totalItems > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-[#FFD700] text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {totalItems > 9 ? '9+' : totalItems}
-                      </span>
-                    )}
+                    <div className="relative">
+                      <ShoppingCart className="h-6 w-6" />
+                      {itemCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-[#FFD700] text-black text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1 border-2 border-black/10 shadow-sm">
+                          {itemCount > 9 ? '9+' : itemCount}
+                        </span>
+                      )}
+                    </div>
                   </button>
                   
                   {/* Cart Preview Dropdown */}
@@ -305,9 +328,14 @@ export default function Header({ storeSettings }: HeaderProps) {
                         top: 'calc(var(--header-height, 5rem) + 1rem)'
                       }}
                     >
-                      <h3 className="text-white font-bold text-lg mb-3 pb-2 border-b border-white/10">
-                        سلة التسوق
-                      </h3>
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
+                        <h3 className="text-white font-bold text-lg">
+                          سلة التسوق
+                        </h3>
+                        <span className="text-sm text-white/60">
+                          {itemCount} عنصر
+                        </span>
+                      </div>
                       <div className="max-h-96 overflow-y-auto pr-2">
                         {cartItems.map((item) => (
                           <div key={item.id} className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
@@ -370,8 +398,28 @@ export default function Header({ storeSettings }: HeaderProps) {
                       </div>
                       <div className="mt-4 pt-3 border-t border-white/10">
                         <div className="flex justify-between items-center mb-4">
-                          <span className="text-white/70">الإجمالي:</span>
-                          <span className="text-[#FFD700] font-bold text-lg">{cartTotal} ج</span>
+                          <span className="text-white/70">المجموع:</span>
+                          <div className="text-right">
+                            <div className="text-[#FFD700] font-bold text-lg">
+                              {(() => {
+                                try {
+                                  const numericValue = parseFloat(cartTotal);
+                                  if (isNaN(numericValue)) {
+                                    console.error('Invalid cart total value:', cartTotal);
+                                    return '٠٫٠٠ ج.م';
+                                  }
+                                  return new Intl.NumberFormat('ar-EG', { 
+                                    style: 'decimal',
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  }).format(numericValue) + ' ج';
+                                } catch (error) {
+                                  console.error('Error formatting cart total:', error);
+                                  return '٠٫٠٠ ج.م';
+                                }
+                              })()}
+                            </div>
+                          </div>
                         </div>
                         <button 
                           onClick={(e) => {
@@ -389,12 +437,7 @@ export default function Header({ storeSettings }: HeaderProps) {
                   )}
                 </div>
               </li>
-              <li>
-                <a href="#contact" className="text-white hover:text-[#FFD700] transition-colors duration-300">
-                  تواصل معنا
-                </a>
-              </li>
-              </ul>
+            </ul>
             </nav>
           </div>
           

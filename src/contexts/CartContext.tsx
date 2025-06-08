@@ -1,25 +1,41 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
 import { toast } from 'react-toastify';
 
+// Add CartContextType interface
+interface CartContextType {
+  cartItems: CartItem[];
+  addToCart: (item: Omit<CartItem, 'id' | 'quantity' | 'numericPrice'>) => void;
+  removeFromCart: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  clearCart: () => void;
+  isCartOpen: boolean;
+  isAutoShowing: boolean;
+  toggleCart: (open?: boolean) => void;
+  itemCount: number;
+  cartTotal: string;
+  sendOrderViaWhatsApp: () => void;
+}
+
 interface CartItem {
-  id: string | number;
+  id: string;
   title: string;
-  price: string;          // Display price (with currency symbol)
-  numericPrice: number;  // Numeric price for calculations
-  imageUrl: string;
+  price: string;
+  numericPrice: number;
   quantity: number;
+  imageUrl?: string;
+  productId?: string; // Optional for backward compatibility
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
+  addToCart: (item: Omit<CartItem, 'quantity' | 'numericPrice' | 'id'>) => void;
   removeFromCart: (id: string | number) => void;
   updateQuantity: (id: string | number, quantity: number) => void;
   clearCart: () => void;
   isCartOpen: boolean;
+  isAutoShowing: boolean;
   toggleCart: () => void;
-  totalItems: number;
-  calculateTotal: () => string;
+  itemCount: number;
   cartTotal: string;
   sendOrderViaWhatsApp: () => void;
 }
@@ -29,6 +45,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAutoShowing, setIsAutoShowing] = useState(false);
 
   const cleanPrice = (price: string | number): { display: string; numeric: number } => {
     // If price is already a number, use it directly
@@ -38,60 +55,81 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         numeric: price
       };
     }
-    
-    // Extract the first number from the string (including decimal points and commas)
-    const match = price.match(/\d+([,.]\d+)?/);
+
+    // Handle Arabic numerals by converting to Western numerals first
+    const westernPrice = price
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+
+    // Extract numbers with decimal points and commas
+    const match = westernPrice.match(/[\d,.]*/g)?.join('');
     let numericValue = 0;
     
     if (match) {
-      // Convert to number, handling both . and , as decimal separators
-      numericValue = parseFloat(match[0].replace(',', '.'));
+      // Remove any non-numeric characters except decimal point
+      const cleanNumber = match.replace(/[^\d.,]/g, '')
+        .replace(/,/g, '.')
+        .replace(/\.(?=.*\.)/g, ''); // Remove all but last decimal point
+      
+      numericValue = parseFloat(cleanNumber) || 0;
+      console.log('Parsed price:', { original: price, western: westernPrice, cleanNumber, numericValue });
     }
     
     return {
       display: price.trim(),
-      numeric: isNaN(numericValue) ? 0 : numericValue
+      numeric: numericValue
     };
   };
 
-  const addToCart = (item: Omit<CartItem, 'quantity' | 'numericPrice'>) => {
+  const addToCart = (item: Omit<CartItem, 'id' | 'quantity' | 'numericPrice'>) => {
     const { display, numeric } = cleanPrice(item.price);
     
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(cartItem => cartItem.id === item.id);
-      
+      // Check if item already exists in cart by title (since we might not have productId)
+      const existingItem = prevItems.find(
+        cartItem => cartItem.title === item.title
+      );
+
       if (existingItem) {
+        // If item exists, increase quantity
         return prevItems.map(cartItem =>
-          cartItem.id === item.id
-            ? { 
-                ...cartItem, 
-                quantity: cartItem.quantity + 1,
-                // Update numeric price in case it changed
-                numericPrice: numeric
-              }
+          cartItem.title === item.title
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
       }
       
+      // If item doesn't exist, add it to cart
       return [...prevItems, { 
         ...item, 
+        id: Date.now().toString(),
         price: display,
         numericPrice: numeric,
         quantity: 1 
       }];
     });
     
-    toast.success('تمت إضافة المنتج إلى السلة', {
+    toast.success('تمت الإضافة إلى السلة', {
       position: 'bottom-right',
       autoClose: 2000,
     });
+    
+    // Show cart temporarily when adding an item
+    showTemporarily();
   };
 
-  const removeFromCart = (id: string | number) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  const removeFromCart = (id: string) => {
+    setCartItems(prevItems => {
+      const newItems = prevItems.filter(item => item.id !== id);
+      // If last item is removed, hide the cart if it was auto-shown
+      if (newItems.length === 0 && isAutoShowing) {
+        toggleCart(false);
+      }
+      return newItems;
+    });
   };
 
-  const updateQuantity = (id: string | number, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) {
       removeFromCart(id);
       return;
@@ -108,11 +146,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCartItems([]);
   };
 
-  const toggleCart = () => {
-    setIsCartOpen(!isCartOpen);
+  const toggleCart = (open?: boolean) => {
+    if (open !== undefined) {
+      setIsCartOpen(open);
+      if (!open) setIsAutoShowing(false);
+    } else {
+      setIsCartOpen(prev => {
+        const newState = !prev;
+        if (!newState) setIsAutoShowing(false);
+        return newState;
+      });
+    }
   };
 
-  const totalItems = useMemo(() => 
+  const itemCount = useMemo(() => 
     cartItems.reduce((total, item) => total + item.quantity, 0),
     [cartItems]
   );
@@ -120,18 +167,38 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const cartTotal = useMemo(() => {
     let total = 0;
     
+    console.log('Calculating cart total for items:', cartItems);
+    
     cartItems.forEach(item => {
       // Ensure we have a valid numeric price and quantity
       const price = typeof item.numericPrice === 'number' ? item.numericPrice : 0;
       const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-      total += price * quantity;
+      const itemTotal = price * quantity;
+      console.log(`Item: ${item.title}, Price: ${price}, Qty: ${quantity}, Subtotal: ${itemTotal}`);
+      total += itemTotal;
     });
     
+    console.log('Raw total before formatting:', total);
+    
+    // Ensure we have a valid number
+    if (isNaN(total) || !isFinite(total)) {
+      console.error('Invalid total calculated, defaulting to 0');
+      total = 0;
+    }
+    
     // Format to 2 decimal places
-    return total.toFixed(2);
+    const formattedTotal = total.toFixed(2);
+    console.log('Formatted total:', formattedTotal);
+    
+    // Debug: Log the final value that will be returned
+    console.log('Returning cart total:', { 
+      formattedTotal, 
+      asNumber: parseFloat(formattedTotal),
+      isNaN: isNaN(parseFloat(formattedTotal))
+    });
+    
+    return formattedTotal;
   }, [cartItems]);
-
-  const calculateTotal = () => cartTotal;
 
   const sendOrderViaWhatsApp = () => {
     if (cartItems.length === 0) {
@@ -154,19 +221,31 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toggleCart();
   };
 
+  const showTemporarily = useCallback(() => {
+    setIsCartOpen(true);
+    setIsAutoShowing(true);
+    
+    const timer = setTimeout(() => {
+      setIsCartOpen(false);
+      setIsAutoShowing(false);
+    }, 4000); // Changed from 3000 to 4000 milliseconds (4 seconds)
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <CartContext.Provider
       value={{
         cartItems,
+        cartTotal,
+        isCartOpen,
+        isAutoShowing,
+        toggleCart,
         addToCart,
         removeFromCart,
         updateQuantity,
         clearCart,
-        isCartOpen,
-        toggleCart,
-        totalItems,
-        calculateTotal,
-        cartTotal,
+        itemCount,
         sendOrderViaWhatsApp
       }}
     >
