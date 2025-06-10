@@ -19,6 +19,8 @@ export default function Header({ storeSettings }: HeaderProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isCartHovered, setIsCartHovered] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCartPreview, setShowCartPreview] = useState(false);
+  const cartPreviewTimer = useRef<NodeJS.Timeout | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -35,7 +37,8 @@ export default function Header({ storeSettings }: HeaderProps) {
     updateQuantity, 
     isCartOpen,
     cartTotal,
-    sendOrderViaWhatsApp
+    sendOrderViaWhatsApp,
+    isAutoShowing
   } = useCart();
   
   // Toggle mobile search and focus the input when opened
@@ -122,6 +125,28 @@ export default function Header({ storeSettings }: HeaderProps) {
     }
   }, [isMenuOpen]);
 
+  // Handle cart preview timeout
+  useEffect(() => {
+    if (showCartPreview) {
+      // Clear any existing timer
+      if (cartPreviewTimer.current) {
+        clearTimeout(cartPreviewTimer.current);
+      }
+      
+      // Set new timer to hide cart preview after 2 seconds
+      cartPreviewTimer.current = setTimeout(() => {
+        setShowCartPreview(false);
+      }, 2000);
+    }
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (cartPreviewTimer.current) {
+        clearTimeout(cartPreviewTimer.current);
+      }
+    };
+  }, [showCartPreview]);
+
   // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -186,27 +211,7 @@ export default function Header({ storeSettings }: HeaderProps) {
     }
   }, [isMobileSearchOpen]);
 
-  useEffect(() => {
-    const handleMouseOver = () => {
-      setIsCartHovered(true);
-    };
-
-    const handleMouseOut = () => {
-      setIsCartHovered(false);
-    };
-
-    if (cartRef.current) {
-      cartRef.current.addEventListener('mouseover', handleMouseOver);
-      cartRef.current.addEventListener('mouseout', handleMouseOut);
-    }
-
-    return () => {
-      if (cartRef.current) {
-        cartRef.current.removeEventListener('mouseover', handleMouseOver);
-        cartRef.current.removeEventListener('mouseout', handleMouseOut);
-      }
-    };
-  }, []);
+  // Remove mouse hover effects since we're using click now
 
   return (
     <>
@@ -337,20 +342,15 @@ export default function Header({ storeSettings }: HeaderProps) {
                     تواصل معنا
                   </a>
                 </li>
-                <li className="relative" ref={cartRef}
-                  onMouseEnter={() => !isCartOpen && setIsCartHovered(true)}
-                  onMouseLeave={() => !isCartOpen && setIsCartHovered(false)}>
+                <li className="relative" ref={cartRef}>
                   <div className="relative">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleCart();
-                        if (isCartOpen) {
-                          setIsCartHovered(false);
-                        }
+                        toggleCart(!isCartOpen);
                       }}
                       className="relative p-2 text-white hover:text-[#FFD700] transition-colors"
-                      aria-label="عربة التسوق"
+                      aria-label="عرض السلة"
                       aria-expanded={isCartOpen}
                     >
                       <div className="relative">
@@ -364,7 +364,7 @@ export default function Header({ storeSettings }: HeaderProps) {
                     </button>
                     
                     {/* Cart Preview Dropdown */}
-                    {(isCartHovered || isCartOpen) && cartItems.length > 0 && (
+                    {isCartOpen && (
                       <div 
                         className="fixed left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] max-w-2xl max-h-[calc(100vh-8rem)] bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-white/10 z-50 p-4 overflow-y-auto"
                         style={{

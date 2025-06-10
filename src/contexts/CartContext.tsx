@@ -1,7 +1,16 @@
-import { createContext, useContext, useState, useMemo, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import { toast } from 'react-toastify';
 
-// Add CartContextType interface
+interface CartItem {
+  id: string;
+  title: string;
+  price: string;
+  numericPrice: number;
+  quantity: number;
+  imageUrl?: string;
+  productId?: string;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: Omit<CartItem, 'id' | 'quantity' | 'numericPrice'>) => void;
@@ -11,30 +20,6 @@ interface CartContextType {
   isCartOpen: boolean;
   isAutoShowing: boolean;
   toggleCart: (open?: boolean) => void;
-  itemCount: number;
-  cartTotal: string;
-  sendOrderViaWhatsApp: () => void;
-}
-
-interface CartItem {
-  id: string;
-  title: string;
-  price: string;
-  numericPrice: number;
-  quantity: number;
-  imageUrl?: string;
-  productId?: string; // Optional for backward compatibility
-}
-
-interface CartContextType {
-  cartItems: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity' | 'numericPrice' | 'id'>) => void;
-  removeFromCart: (id: string | number) => void;
-  updateQuantity: (id: string | number, quantity: number) => void;
-  clearCart: () => void;
-  isCartOpen: boolean;
-  isAutoShowing: boolean;
-  toggleCart: () => void;
   itemCount: number;
   cartTotal: string;
   sendOrderViaWhatsApp: () => void;
@@ -114,8 +99,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       autoClose: 2000,
     });
     
-    // Show cart temporarily when adding an item
-    showTemporarily();
+        // Show cart temporarily when adding an item
+    if (typeof showTemporarily === 'function') {
+      showTemporarily();
+    }
   };
 
   const removeFromCart = (id: string) => {
@@ -146,7 +133,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCartItems([]);
   };
 
-  const toggleCart = (open?: boolean) => {
+  const showTemporarily = useCallback(() => {
+    setIsCartOpen(true);
+    setIsAutoShowing(true);
+    
+    // إخفاء السلة بعد 4 ثواني
+    const timer = setTimeout(() => {
+      setIsCartOpen(false);
+      setIsAutoShowing(false);
+    }, 4000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  const toggleCart = useCallback((open?: boolean) => {
     if (open !== undefined) {
       setIsCartOpen(open);
       if (!open) setIsAutoShowing(false);
@@ -157,7 +157,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return newState;
       });
     }
-  };
+  }, []);
 
   const itemCount = useMemo(() => 
     cartItems.reduce((total, item) => total + item.quantity, 0),
@@ -221,17 +221,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toggleCart();
   };
 
-  const showTemporarily = useCallback(() => {
-    setIsCartOpen(true);
-    setIsAutoShowing(true);
-    
-    const timer = setTimeout(() => {
-      setIsCartOpen(false);
-      setIsAutoShowing(false);
-    }, 4000); // Changed from 3000 to 4000 milliseconds (4 seconds)
-    
-    return () => clearTimeout(timer);
-  }, []);
+
 
   return (
     <CartContext.Provider

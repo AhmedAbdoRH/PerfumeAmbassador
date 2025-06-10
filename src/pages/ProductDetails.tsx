@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../types/database';
@@ -44,10 +44,16 @@ export default function ProductDetails() {
   useEffect(() => {
     if (id) {
       fetchService(id);
-      fetchSuggested();
       setCurrentImageIndex(0); // Reset image index when product changes
     }
   }, [id]);
+
+  // Fetch suggested products when service data is loaded
+  useEffect(() => {
+    if (service) {
+      fetchSuggested();
+    }
+  }, [service]);
 
   const fetchService = async (serviceId: string) => {
     try {
@@ -72,11 +78,15 @@ export default function ProductDetails() {
   };
 
   const fetchSuggested = async () => {
+    if (!service) return;
+    
     const { data } = await supabase
       .from('services')
       .select('*')
-      .neq('id', id)
+      .eq('category_id', service.category_id) // Filter by the same category
+      .neq('id', id) // Exclude current product
       .limit(10);
+      
     setSuggested(data || []);
   };
 
