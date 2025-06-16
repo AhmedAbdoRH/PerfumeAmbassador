@@ -2046,6 +2046,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                               className="h-5 w-5 text-yellow-400 rounded focus:ring-yellow-400 border-gray-600 bg-gray-700"
                             />
                             <label htmlFor="is_featured" className="mr-2 text-sm font-medium text-white">
+                                 أحدث العروض
                             </label>
                           </div>
                           <div className="flex items-center">
