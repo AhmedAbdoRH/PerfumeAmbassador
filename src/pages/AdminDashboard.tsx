@@ -23,7 +23,7 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -56,6 +56,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
     sale_price: '',
     category_id: '',
     gallery: [] as string[],
+    is_featured: false,
+    is_best_seller: false,
   });
   const [newBanner, setNewBanner] = useState<Partial<Banner>>({
     type: 'text',
@@ -590,15 +592,39 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       const serviceToAdd = {
         ...newService,
         category_id: selectedCategory,
-        sale_price: newService.sale_price || null
+        sale_price: newService.sale_price || null,
+        is_featured: newService.is_featured || false,
+        is_best_seller: newService.is_best_seller || false
       };
-      const { error } = await supabase.from('services').insert([serviceToAdd]);
+      
+      console.log('Adding service:', serviceToAdd); // Debug log
+      
+      const { data, error } = await supabase
+        .from('services')
+        .insert([serviceToAdd])
+        .select();
+        
       if (error) throw error;
+      
+      console.log('Service added successfully:', data); // Debug log
 
-      setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
-      setSelectedCategory('');
+      // Reset form
+      setNewService({ 
+        title: '', 
+        description: '', 
+        image_url: '', 
+        price: '', 
+        sale_price: '', 
+        category_id: '', 
+        gallery: [],
+        is_featured: false,
+        is_best_seller: false
+      });
+      setSelectedCategory(null);
       await fetchData();
+      setSuccessMsg('تمت إضافة المنتج بنجاح');
     } catch (err: any) {
+      console.error('Error adding service:', err); // Debug log
       setError(`خطأ في إضافة المنتج: ${err.message}`);
     } finally {
       setIsLoading(false);
@@ -615,6 +641,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
       sale_price: service.sale_price || '',
       category_id: service.category_id || '',
       gallery: Array.isArray(service.gallery) ? service.gallery : [],
+      is_featured: service.is_featured || false,
+      is_best_seller: service.is_best_seller || false
     });
     setSelectedCategory(service.category_id || '');
     const formElement = document.getElementById('service-form');
@@ -638,6 +666,8 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         sale_price: newService.sale_price || null,
         category_id: selectedCategory,
         gallery: Array.isArray(newService.gallery) ? newService.gallery : [],
+        is_featured: newService.is_featured || false,
+        is_best_seller: newService.is_best_seller || false
       };
       const { error } = await supabase
         .from('services')
@@ -645,7 +675,17 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
         .eq('id', editingService);
       if (error) throw error;
 
-      setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
+      setNewService({ 
+        title: '', 
+        description: '', 
+        image_url: '', 
+        price: '', 
+        sale_price: '', 
+        category_id: '', 
+        gallery: [],
+        is_featured: false,
+        is_best_seller: false
+      });
       setSelectedCategory('');
       setEditingService(null);
       await fetchData();
@@ -658,7 +698,17 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
 
   const handleCancelEdit = () => {
     setEditingService(null);
-    setNewService({ title: '', description: '', image_url: '', price: '', sale_price: '', category_id: '', gallery: [] });
+    setNewService({ 
+      title: '', 
+      description: '', 
+      image_url: '', 
+      price: '', 
+      sale_price: '', 
+      category_id: '', 
+      gallery: [],
+      is_featured: false,
+      is_best_seller: false
+    });
     setSelectedCategory('');
     setError(null);
   };
@@ -1983,6 +2033,32 @@ export default function AdminDashboard({ onSettingsUpdate }: AdminDashboardProps
                               className={`w-full p-3 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#34C759] focus:border-transparent bg-black/20 backdrop-blur-sm border border-white/10 disabled:opacity-70 disabled:cursor-not-allowed`}
                               disabled={isLoading}
                             />
+                          </div>
+                        </div>
+                        {/* Latest Offers and Best Sellers Checkboxes */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="is_featured"
+                              checked={newService.is_featured || false}
+                              onChange={(e) => setNewService({ ...newService, is_featured: e.target.checked })}
+                              className="h-5 w-5 text-yellow-400 rounded focus:ring-yellow-400 border-gray-600 bg-gray-700"
+                            />
+                            <label htmlFor="is_featured" className="mr-2 text-sm font-medium text-white">
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="is_best_seller"
+                              checked={newService.is_best_seller || false}
+                              onChange={(e) => setNewService({ ...newService, is_best_seller: e.target.checked })}
+                              className="h-5 w-5 text-yellow-400 rounded focus:ring-yellow-400 border-gray-600 bg-gray-700"
+                            />
+                            <label htmlFor="is_best_seller" className="mr-2 text-sm font-medium text-white">
+                              الأكثر مبيعاً
+                            </label>
                           </div>
                         </div>
                         {/* رفع الصور الإضافية */}
